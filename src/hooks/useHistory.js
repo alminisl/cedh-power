@@ -19,17 +19,22 @@ function saveHistory(entries) {
 export function useHistory() {
   const [history, setHistory] = useState(loadHistory);
 
-  const addEntry = useCallback((results) => {
+  const addEntry = useCallback((results, commander, cards) => {
     const entry = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       timestamp: Date.now(),
       cardCount: results.cardBreakdown.length,
       averagePairPower: results.averagePairPower,
       firstCards: results.cardBreakdown.slice(0, 3).map((c) => c.name),
+      commander: commander || null,
+      cards: cards,
     };
 
     setHistory((prev) => {
-      const next = [entry, ...prev].slice(0, MAX_ENTRIES);
+      const withoutDupe = entry.commander
+        ? prev.filter((e) => e.commander !== entry.commander)
+        : prev;
+      const next = [entry, ...withoutDupe].slice(0, MAX_ENTRIES);
       saveHistory(next);
       return next;
     });

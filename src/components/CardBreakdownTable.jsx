@@ -2,13 +2,10 @@ import { useState, useMemo } from "react";
 import { Search, ArrowUpDown } from "lucide-react";
 import CardTooltip from "./CardTooltip";
 
-function getQuartileColor(value, min, max) {
-  const range = max - min;
-  if (range === 0) return "bg-gray-500";
-  const pct = (value - min) / range;
-  if (pct >= 0.75) return "bg-green-500";
-  if (pct >= 0.5) return "bg-emerald-500";
-  if (pct >= 0.25) return "bg-amber-500";
+function getQuartileColor(pct) {
+  if (pct >= 75) return "bg-green-500";
+  if (pct >= 50) return "bg-emerald-500";
+  if (pct >= 25) return "bg-amber-500";
   return "bg-red-500";
 }
 
@@ -16,11 +13,6 @@ export default function CardBreakdownTable({ breakdown }) {
   const [filter, setFilter] = useState("");
   const [sortKey, setSortKey] = useState("avgPairPower");
   const [sortAsc, setSortAsc] = useState(false);
-
-  const { min, max } = useMemo(() => {
-    const powers = breakdown.map((c) => c.avgPairPower);
-    return { min: Math.min(...powers), max: Math.max(...powers) };
-  }, [breakdown]);
 
   const sorted = useMemo(() => {
     const filtered = filter
@@ -95,10 +87,10 @@ export default function CardBreakdownTable({ breakdown }) {
           </thead>
           <tbody>
             {sorted.map((card, i) => {
-              const barWidth =
-                max > min
-                  ? ((card.avgPairPower - min) / (max - min)) * 100
-                  : 50;
+              const percentile =
+                sorted.length > 1
+                  ? Math.round(((sorted.length - 1 - i) / (sorted.length - 1)) * 100)
+                  : 100;
 
               return (
                 <tr
@@ -116,11 +108,16 @@ export default function CardBreakdownTable({ breakdown }) {
                   <td className="py-2">{card.pairsFound}</td>
                   <td className="py-2">{card.pairsMissing}</td>
                   <td className="py-2">
-                    <div className="w-full bg-bg rounded-full h-2.5">
-                      <div
-                        className={`h-2.5 rounded-full transition-all ${getQuartileColor(card.avgPairPower, min, max)}`}
-                        style={{ width: `${Math.max(barWidth, 2)}%` }}
-                      />
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-bg rounded-full h-2.5">
+                        <div
+                          className={`h-2.5 rounded-full transition-all ${getQuartileColor(percentile)}`}
+                          style={{ width: `${Math.max(percentile, 2)}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-text-muted font-mono w-10 text-right shrink-0">
+                        {percentile}%
+                      </span>
                     </div>
                   </td>
                 </tr>

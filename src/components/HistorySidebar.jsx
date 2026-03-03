@@ -11,12 +11,12 @@ function formatTime(ts) {
   });
 }
 
-export default function HistorySidebar({ history, onClear }) {
+export default function HistorySidebar({ history, onClear, onSelect }) {
   if (history.length === 0) return null;
 
   return (
     <aside className="w-72 shrink-0">
-      <div className="glass rounded-xl p-4 sticky top-4">
+      <div className="glass rounded-xl p-4 sticky top-16">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold flex items-center gap-2">
             <History className="w-4 h-4 text-accent" />
@@ -35,7 +35,7 @@ export default function HistorySidebar({ history, onClear }) {
           {history.map((entry) => (
             <li
               key={entry.id}
-              onClick={() => console.log("History entry clicked:", entry)}
+              onClick={() => onSelect?.(entry)}
               className="p-3 rounded-lg bg-bg/50 hover:bg-surface-light/50 transition-colors cursor-pointer border border-border/50"
             >
               <div className="flex items-center justify-between mb-1">
@@ -46,9 +46,15 @@ export default function HistorySidebar({ history, onClear }) {
                   {entry.cardCount} cards
                 </span>
               </div>
-              <p className="text-xs text-text-muted truncate">
-                {entry.firstCards.join(", ")}
-              </p>
+              {entry.commander ? (
+                <p className="text-xs font-medium text-text truncate">
+                  {entry.commander}
+                </p>
+              ) : (
+                <p className="text-xs text-text-muted truncate">
+                  {entry.firstCards.join(", ")}
+                </p>
+              )}
               <p className="text-xs text-text-muted/60 mt-1">
                 {formatTime(entry.timestamp)}
               </p>
