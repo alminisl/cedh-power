@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(npx create-vite:*)",
+      "Bash(npx:*)",
+      "Bash(cp:*)",
+      "Bash(npm install:*)",
+      "Bash(python3:*)",
+      "WebFetch(domain:brackcheck.com)",
+      "Bash(pip install:*)",
+      "Bash(node:*)",
+      "Bash(python:*)",
+      "Bash(npm run:*)"
+    ]
+  }
+}
