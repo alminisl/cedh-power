@@ -1,31 +1,36 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Loader2 } from "lucide-react";
 
-const imageCache = new Set();
+const imageCache = new Set<string>();
 
-function getScryfallUrl(cardName) {
+function getScryfallUrl(cardName: string): string {
   return `https://api.scryfall.com/cards/named?format=image&exact=${encodeURIComponent(cardName)}&version=normal`;
 }
 
-export default function CardTooltip({ cardName, children }) {
+interface CardTooltipProps {
+  cardName: string;
+  children: ReactNode;
+}
+
+export default function CardTooltip({ cardName, children }: CardTooltipProps) {
   const [visible, setVisible] = useState(false);
   const [loaded, setLoaded] = useState(() => imageCache.has(cardName));
   const [errored, setErrored] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
-  const showRef = useRef(null);
-  const hideRef = useRef(null);
-  const spanRef = useRef(null);
+  const showRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const spanRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     return () => {
-      clearTimeout(showRef.current);
-      clearTimeout(hideRef.current);
+      if (showRef.current) clearTimeout(showRef.current);
+      if (hideRef.current) clearTimeout(hideRef.current);
     };
   }, []);
 
   const handleMouseEnter = useCallback(() => {
-    clearTimeout(hideRef.current);
+    if (hideRef.current) clearTimeout(hideRef.current);
     showRef.current = setTimeout(() => {
       if (!spanRef.current) return;
       const rect = spanRef.current.getBoundingClientRect();
@@ -49,7 +54,7 @@ export default function CardTooltip({ cardName, children }) {
   }, []);
 
   const handleMouseLeave = useCallback(() => {
-    clearTimeout(showRef.current);
+    if (showRef.current) clearTimeout(showRef.current);
     hideRef.current = setTimeout(() => {
       setVisible(false);
     }, 100);

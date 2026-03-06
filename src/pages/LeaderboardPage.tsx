@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
 import { Search, ArrowUpDown, Trophy, SlidersHorizontal } from "lucide-react";
 import { aggregateCardStats } from "../lib/aggregateCardStats";
+import type { PairData, CardStat } from "../types";
 import CardTooltip from "../components/CardTooltip";
 
-function getQuartileColor(value, min, max) {
+function getQuartileColor(value: number, min: number, max: number): string {
   const range = max - min;
   if (range === 0) return "bg-gray-500";
   const pct = (value - min) / range;
@@ -15,10 +16,16 @@ function getQuartileColor(value, min, max) {
 
 const PAGE_SIZE = 50;
 
-export default function LeaderboardPage({ pairData }) {
+type SortKey = keyof CardStat;
+
+interface LeaderboardPageProps {
+  pairData: PairData | null;
+}
+
+export default function LeaderboardPage({ pairData }: LeaderboardPageProps) {
   const [filter, setFilter] = useState("");
   const [minPairs, setMinPairs] = useState(1);
-  const [sortKey, setSortKey] = useState("avgPower");
+  const [sortKey, setSortKey] = useState<SortKey>("avgPower");
   const [sortAsc, setSortAsc] = useState(false);
   const [page, setPage] = useState(0);
 
@@ -47,16 +54,16 @@ export default function LeaderboardPage({ pairData }) {
     return [...filtered].sort((a, b) => {
       const av = a[sortKey];
       const bv = b[sortKey];
-      if (typeof av === "string")
+      if (typeof av === "string" && typeof bv === "string")
         return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
-      return sortAsc ? av - bv : bv - av;
+      return sortAsc ? (av as number) - (bv as number) : (bv as number) - (av as number);
     });
   }, [allCards, filter, minPairs, sortKey, sortAsc]);
 
   const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
   const pageItems = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  function toggleSort(key) {
+  function toggleSort(key: SortKey) {
     if (sortKey === key) setSortAsc(!sortAsc);
     else {
       setSortKey(key);
@@ -64,7 +71,7 @@ export default function LeaderboardPage({ pairData }) {
     }
   }
 
-  const columns = [
+  const columns: { key: SortKey; label: string }[] = [
     { key: "name", label: "Card Name" },
     { key: "avgPower", label: "Avg Power" },
     { key: "totalPower", label: "Total Power" },

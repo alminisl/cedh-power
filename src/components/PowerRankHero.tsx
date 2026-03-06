@@ -1,4 +1,8 @@
-export default function PowerRankHero({ value }) {
+interface PowerRankHeroProps {
+  value: number;
+}
+
+export default function PowerRankHero({ value }: PowerRankHeroProps) {
   return (
     <div className="glass glow-orange rounded-2xl p-8 text-center max-w-md mx-auto">
       <p className="text-sm font-medium text-text-muted uppercase tracking-widest mb-2">

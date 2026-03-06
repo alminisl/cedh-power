@@ -1,5 +1,7 @@
-export function aggregateCardStats(pairData) {
-  const cardMap = {};
+import type { PairData, CardStat } from "../types";
+
+export function aggregateCardStats(pairData: PairData): CardStat[] {
+  const cardMap: Record<string, { pairs: number; totalPower: number; totalConf: number; totalLogMult: number }> = {};
 
   for (const [key, data] of Object.entries(pairData)) {
     const [a, b] = key.split("|||");
@@ -18,7 +20,7 @@ export function aggregateCardStats(pairData) {
     }
   }
 
-  const result = Object.entries(cardMap).map(([name, stats]) => ({
+  const result: CardStat[] = Object.entries(cardMap).map(([name, stats]) => ({
     name,
     pairs: stats.pairs,
     totalPower: stats.totalPower,

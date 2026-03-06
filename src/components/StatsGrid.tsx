@@ -1,4 +1,10 @@
-export default function StatsGrid({ stats }) {
+import type { DeckAnalysis } from "../types";
+
+interface StatsGridProps {
+  stats: DeckAnalysis;
+}
+
+export default function StatsGrid({ stats }: StatsGridProps) {
   const items = [
     { label: "Total Pairs", value: stats.totalPairs.toLocaleString() },
     { label: "Pairs Found", value: stats.pairsFound.toLocaleString() },

@@ -2,7 +2,14 @@ import { useState } from "react";
 import { ClipboardPaste, Sparkles, Users, AlertTriangle } from "lucide-react";
 import { parseDeckList } from "../lib/deckAnalyzer";
 
-export default function DeckInput({ onAnalyze, disabled, text, onTextChange }) {
+interface DeckInputProps {
+  onAnalyze: (cards: string[], commander: string) => void;
+  disabled: boolean;
+  text: string;
+  onTextChange: (text: string) => void;
+}
+
+export default function DeckInput({ onAnalyze, disabled, text, onTextChange }: DeckInputProps) {
   const [partners, setPartners] = useState(false);
 
   const cards = parseDeckList(text);

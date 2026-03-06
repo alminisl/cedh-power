@@ -1,13 +1,14 @@
 import { useState, useCallback } from "react";
+import type { PairData, PairStats } from "../types";
 
 const STORAGE_KEY = "cedh-custom-pairs";
 
-function normalizePairKey(cardA, cardB) {
+function normalizePairKey(cardA: string, cardB: string): string {
   const [a, b] = [cardA.trim(), cardB.trim()].sort();
   return `${a}|||${b}`;
 }
 
-function loadCustomPairs() {
+function loadCustomPairs(): PairData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : {};
@@ -16,14 +17,14 @@ function loadCustomPairs() {
   }
 }
 
-function saveCustomPairs(pairs) {
+function saveCustomPairs(pairs: PairData) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(pairs));
 }
 
 export function useCustomPairs() {
-  const [customPairs, setCustomPairs] = useState(loadCustomPairs);
+  const [customPairs, setCustomPairs] = useState<PairData>(loadCustomPairs);
 
-  const addPair = useCallback((cardA, cardB, stats) => {
+  const addPair = useCallback((cardA: string, cardB: string, stats: PairStats) => {
     const key = normalizePairKey(cardA, cardB);
     setCustomPairs((prev) => {
       const next = { ...prev, [key]: stats };
@@ -32,7 +33,7 @@ export function useCustomPairs() {
     });
   }, []);
 
-  const addPairsBulk = useCallback((pairsObj) => {
+  const addPairsBulk = useCallback((pairsObj: PairData) => {
     setCustomPairs((prev) => {
       const next = { ...prev, ...pairsObj };
       saveCustomPairs(next);
@@ -40,7 +41,7 @@ export function useCustomPairs() {
     });
   }, []);
 
-  const removePair = useCallback((key) => {
+  const removePair = useCallback((key: string) => {
     setCustomPairs((prev) => {
       const next = { ...prev };
       delete next[key];

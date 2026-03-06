@@ -1,9 +1,10 @@
 import { useState, useCallback } from "react";
+import type { DeckAnalysis, HistoryEntry } from "../types";
 
 const STORAGE_KEY = "cedh-power-history";
 const MAX_ENTRIES = 50;
 
-function loadHistory() {
+function loadHistory(): HistoryEntry[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
@@ -12,15 +13,15 @@ function loadHistory() {
   }
 }
 
-function saveHistory(entries) {
+function saveHistory(entries: HistoryEntry[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
 }
 
 export function useHistory() {
-  const [history, setHistory] = useState(loadHistory);
+  const [history, setHistory] = useState<HistoryEntry[]>(loadHistory);
 
-  const addEntry = useCallback((results, commander, cards) => {
-    const entry = {
+  const addEntry = useCallback((results: DeckAnalysis, commander: string, cards: string[]) => {
+    const entry: HistoryEntry = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       timestamp: Date.now(),
       cardCount: results.cardBreakdown.length,

@@ -1,17 +1,24 @@
 import { useState, useMemo } from "react";
 import { Search, ArrowUpDown } from "lucide-react";
+import type { CardBreakdownItem } from "../types";
 import CardTooltip from "./CardTooltip";
 
-function getQuartileColor(pct) {
+function getQuartileColor(pct: number): string {
   if (pct >= 75) return "bg-green-500";
   if (pct >= 50) return "bg-emerald-500";
   if (pct >= 25) return "bg-amber-500";
   return "bg-red-500";
 }
 
-export default function CardBreakdownTable({ breakdown }) {
+type SortKey = keyof CardBreakdownItem;
+
+interface CardBreakdownTableProps {
+  breakdown: CardBreakdownItem[];
+}
+
+export default function CardBreakdownTable({ breakdown }: CardBreakdownTableProps) {
   const [filter, setFilter] = useState("");
-  const [sortKey, setSortKey] = useState("avgPairPower");
+  const [sortKey, setSortKey] = useState<SortKey>("avgPairPower");
   const [sortAsc, setSortAsc] = useState(false);
 
   const sorted = useMemo(() => {
@@ -24,12 +31,13 @@ export default function CardBreakdownTable({ breakdown }) {
     return [...filtered].sort((a, b) => {
       const av = a[sortKey];
       const bv = b[sortKey];
-      if (typeof av === "string") return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
-      return sortAsc ? av - bv : bv - av;
+      if (typeof av === "string" && typeof bv === "string")
+        return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+      return sortAsc ? (av as number) - (bv as number) : (bv as number) - (av as number);
     });
   }, [breakdown, filter, sortKey, sortAsc]);
 
-  function toggleSort(key) {
+  function toggleSort(key: SortKey) {
     if (sortKey === key) setSortAsc(!sortAsc);
     else {
       setSortKey(key);
@@ -37,7 +45,7 @@ export default function CardBreakdownTable({ breakdown }) {
     }
   }
 
-  const columns = [
+  const columns: { key: SortKey; label: string }[] = [
     { key: "name", label: "Card Name" },
     { key: "avgPairPower", label: "Avg Power" },
     { key: "contribution", label: "Contribution" },
@@ -102,6 +110,11 @@ export default function CardBreakdownTable({ breakdown }) {
                     <CardTooltip cardName={card.name}>
                       {card.name}
                     </CardTooltip>
+                    {card.quantity && card.quantity > 1 && (
+                      <span className="ml-1.5 text-xs text-text-muted font-normal">
+                        x{card.quantity}
+                      </span>
+                    )}
                   </td>
                   <td className="py-2 font-mono">{card.avgPairPower.toFixed(4)}</td>
                   <td className="py-2 font-mono">{card.contribution.toFixed(2)}</td>
