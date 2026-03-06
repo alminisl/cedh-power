@@ -1,8 +1,65 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Swords, Trash2, Loader2, LogIn } from "lucide-react";
+import { Swords, Trash2, Loader2, LogIn, ArrowUpDown } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useDecklists } from "../hooks/useDecklists";
+import type { Decklist } from "../hooks/useDecklists";
+
+type SortKey = "power_rank" | "commander";
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "power_rank", label: "Power Rank" },
+  { key: "commander", label: "Name" },
+];
+
+const COLOR_ORDER = ["W", "U", "B", "R", "G"];
+const COLOR_STYLES: Record<string, { bg: string; text: string; label: string }> = {
+  W: { bg: "bg-amber-100", text: "text-amber-900", label: "W" },
+  U: { bg: "bg-blue-500", text: "text-white", label: "U" },
+  B: { bg: "bg-gray-800", text: "text-gray-200", label: "B" },
+  R: { bg: "bg-red-500", text: "text-white", label: "R" },
+  G: { bg: "bg-green-600", text: "text-white", label: "G" },
+};
+
+function ColorFilterButton({ color, active, onClick }: { color: string; active: boolean; onClick: () => void }) {
+  const style = COLOR_STYLES[color];
+  if (!style) return null;
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition-all cursor-pointer ${
+        active
+          ? `${style.bg} ${style.text} ring-2 ring-accent`
+          : `${style.bg} ${style.text} opacity-30 hover:opacity-60`
+      }`}
+    >
+      {style.label}
+    </button>
+  );
+}
+
+function ColorPips({ colors }: { colors: string[] }) {
+  if (!colors || colors.length === 0) {
+    return <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-600 text-gray-300 text-[10px] font-bold">C</span>;
+  }
+  const sorted = [...colors].sort((a, b) => COLOR_ORDER.indexOf(a) - COLOR_ORDER.indexOf(b));
+  return (
+    <span className="inline-flex gap-0.5">
+      {sorted.map((c) => {
+        const style = COLOR_STYLES[c];
+        if (!style) return null;
+        return (
+          <span
+            key={c}
+            className={`inline-flex items-center justify-center w-5 h-5 rounded-full ${style.bg} ${style.text} text-[10px] font-bold`}
+          >
+            {style.label}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
 
 function formatTime(ts: string): string {
   const d = new Date(ts);
@@ -20,6 +77,50 @@ export default function DecksPage() {
   const { user, signInWithDiscord } = useAuth();
   const { decklists, loading, deleteDeck } = useDecklists(user?.id);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>("power_rank");
+  const [sortAsc, setSortAsc] = useState(false);
+  const [colorFilter, setColorFilter] = useState<Set<string>>(new Set());
+
+  function toggleColor(c: string) {
+    setColorFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(c)) next.delete(c);
+      else next.add(c);
+      return next;
+    });
+  }
+
+  const sorted = useMemo(() => {
+    let filtered = decklists;
+    if (colorFilter.size > 0) {
+      filtered = decklists.filter((d) => {
+        const ci = d.color_identity ?? [];
+        return [...colorFilter].every((c) => ci.includes(c));
+      });
+    }
+    return [...filtered].sort((a, b) => {
+      let av: string | number;
+      let bv: string | number;
+      if (sortKey === "commander") {
+        av = (a.commander ?? "").toLowerCase();
+        bv = (b.commander ?? "").toLowerCase();
+      } else {
+        av = a[sortKey];
+        bv = b[sortKey];
+      }
+      if (typeof av === "string" && typeof bv === "string")
+        return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+      return sortAsc ? (av as number) - (bv as number) : (bv as number) - (av as number);
+    });
+  }, [decklists, sortKey, sortAsc, colorFilter]);
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setSortAsc(!sortAsc);
+    else {
+      setSortKey(key);
+      setSortAsc(key === "commander");
+    }
+  }
 
   if (!user) {
     return (
@@ -40,13 +141,55 @@ export default function DecksPage() {
 
   return (
     <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <Swords className="w-6 h-6 text-accent" />
         <h1 className="text-2xl font-bold">My Decks</h1>
         <span className="text-sm text-text-muted">
-          {decklists.length} deck{decklists.length !== 1 ? "s" : ""}
+          {sorted.length}{colorFilter.size > 0 ? ` / ${decklists.length}` : ""} deck{sorted.length !== 1 ? "s" : ""}
         </span>
       </div>
+
+      {decklists.length > 0 && (
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <ArrowUpDown className="w-3.5 h-3.5 text-text-muted" />
+            {SORT_OPTIONS.map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => toggleSort(key)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  sortKey === key
+                    ? "bg-accent/15 text-accent"
+                    : "text-text-muted hover:text-text"
+                }`}
+              >
+                {label}
+                {sortKey === key && (
+                  <span className="ml-0.5">{sortAsc ? "↑" : "↓"}</span>
+                )}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1.5">
+            {COLOR_ORDER.map((c) => (
+              <ColorFilterButton
+                key={c}
+                color={c}
+                active={colorFilter.has(c)}
+                onClick={() => toggleColor(c)}
+              />
+            ))}
+            {colorFilter.size > 0 && (
+              <button
+                onClick={() => setColorFilter(new Set())}
+                className="text-xs text-text-muted hover:text-text ml-1 cursor-pointer"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-16">
@@ -60,16 +203,19 @@ export default function DecksPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {decklists.map((deck) => (
+          {sorted.map((deck) => (
             <Link
               key={deck.id}
               to={`/decks/${deck.id}`}
               className="glass rounded-xl p-5 hover:bg-surface-light/50 transition-colors border border-border/50 hover:border-accent/30 group block"
             >
               <div className="flex items-start justify-between mb-3">
-                <h3 className="font-semibold truncate pr-2">
-                  {deck.commander || "Unnamed Deck"}
-                </h3>
+                <div className="flex items-center gap-2 min-w-0 pr-2">
+                  <ColorPips colors={deck.color_identity ?? []} />
+                  <h3 className="font-semibold truncate">
+                    {deck.commander || "Unnamed Deck"}
+                  </h3>
+                </div>
                 {confirmDeleteId === deck.id ? (
                   <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.preventDefault()}>
                     <button
@@ -97,9 +243,9 @@ export default function DecksPage() {
 
               <div className="grid grid-cols-2 gap-2 text-xs mb-3">
                 <div>
-                  <span className="text-text-muted">Avg Power</span>
+                  <span className="text-text-muted">Power Rank</span>
                   <p className="font-mono font-semibold text-accent">
-                    {deck.average_pair_power.toFixed(4)}
+                    {deck.power_rank.toFixed(2)}
                   </p>
                 </div>
                 <div>

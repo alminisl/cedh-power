@@ -6,6 +6,7 @@ export interface Decklist {
   id: string;
   user_id: string;
   commander: string | null;
+  color_identity: string[];
   cards: string[];
   power_rank: number;
   average_pair_power: number;
@@ -14,6 +15,20 @@ export interface Decklist {
   total_pairs: number;
   created_at: string;
   updated_at: string;
+}
+
+async function fetchColorIdentity(commander: string): Promise<string[]> {
+  if (!commander) return [];
+  try {
+    const res = await fetch(
+      `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(commander)}`
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.color_identity ?? [];
+  } catch {
+    return [];
+  }
 }
 
 export function useDecklists(userId: string | undefined) {
@@ -46,9 +61,12 @@ export function useDecklists(userId: string | undefined) {
         (d) => d.commander?.toLowerCase() === commander.toLowerCase()
       );
 
+      const colorIdentity = await fetchColorIdentity(commander);
+
       const row = {
         user_id: userId,
         commander: commander || null,
+        color_identity: colorIdentity,
         cards,
         power_rank: analysis.totalPowerRank,
         average_pair_power: analysis.averagePairPower,
