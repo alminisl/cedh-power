@@ -14,9 +14,11 @@ type SortKey = keyof CardBreakdownItem;
 
 interface CardBreakdownTableProps {
   breakdown: CardBreakdownItem[];
+  selectedCard?: string | null;
+  onSelectCard?: (name: string) => void;
 }
 
-export default function CardBreakdownTable({ breakdown }: CardBreakdownTableProps) {
+export default function CardBreakdownTable({ breakdown, selectedCard, onSelectCard }: CardBreakdownTableProps) {
   const [filter, setFilter] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("avgPairPower");
   const [sortAsc, setSortAsc] = useState(false);
@@ -103,7 +105,14 @@ export default function CardBreakdownTable({ breakdown }: CardBreakdownTableProp
               return (
                 <tr
                   key={card.name}
-                  className="border-b border-border/50 hover:bg-surface-light/50 transition-colors"
+                  onClick={() => onSelectCard?.(card.name)}
+                  className={`border-b border-border/50 transition-colors ${
+                    onSelectCard ? "cursor-pointer" : ""
+                  } ${
+                    selectedCard === card.name
+                      ? "bg-accent/10 hover:bg-accent/15"
+                      : "hover:bg-surface-light/50"
+                  }`}
                 >
                   <td className="py-2 text-text-muted">{i + 1}</td>
                   <td className="py-2 font-medium">

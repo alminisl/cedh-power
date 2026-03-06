@@ -1,4 +1,4 @@
-import type { PairData, DeckAnalysis } from "../types";
+import type { PairData, DeckAnalysis, SwapResult } from "../types";
 
 const DEFAULT_POWER = 5.72;
 
@@ -124,5 +124,24 @@ export function analyzeDeck(cards: string[], pairData: PairData): DeckAnalysis {
     pairsMissing,
     averagePairPower,
     cardBreakdown,
+  };
+}
+
+export function simulateSwap(
+  cards: string[],
+  oldCard: string,
+  newCard: string,
+  pairData: PairData
+): SwapResult {
+  const oldAnalysis = analyzeDeck(cards, pairData);
+  const newCards = cards.map((c) => (c === oldCard ? newCard : c));
+  const newAnalysis = analyzeDeck(newCards, pairData);
+
+  return {
+    oldCard,
+    newCard,
+    oldPower: oldAnalysis.averagePairPower,
+    newPower: newAnalysis.averagePairPower,
+    diff: newAnalysis.averagePairPower - oldAnalysis.averagePairPower,
   };
 }

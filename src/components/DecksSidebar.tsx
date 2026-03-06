@@ -58,7 +58,7 @@ function SavedDecks({
 
   if (loading) {
     return (
-      <aside className="w-72 shrink-0">
+      <aside className="w-80 shrink-0">
         <div className="glass rounded-xl p-4 sticky top-16 flex items-center justify-center py-8">
           <Loader2 className="w-5 h-5 text-accent animate-spin" />
         </div>
@@ -68,7 +68,7 @@ function SavedDecks({
 
   if (decklists.length === 0) {
     return (
-      <aside className="w-72 shrink-0">
+      <aside className="w-80 shrink-0">
         <div className="glass rounded-xl p-4 sticky top-16">
           <h2 className="text-sm font-semibold flex items-center gap-2 mb-3">
             <Swords className="w-4 h-4 text-accent" />
@@ -83,7 +83,7 @@ function SavedDecks({
   }
 
   return (
-    <aside className="w-72 shrink-0">
+    <aside className="w-80 shrink-0">
       <div className="glass rounded-xl p-4 sticky top-16">
         <h2 className="text-sm font-semibold flex items-center gap-2 mb-4">
           <Swords className="w-4 h-4 text-accent" />
@@ -162,7 +162,7 @@ function HistorySidebarFallback({
   if (history.length === 0) return null;
 
   return (
-    <aside className="w-72 shrink-0">
+    <aside className="w-80 shrink-0">
       <div className="glass rounded-xl p-4 sticky top-16">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold flex items-center gap-2">

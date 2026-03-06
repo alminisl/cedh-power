@@ -1,18 +1,23 @@
 import { useState } from "react";
 import { Save, CheckCircle } from "lucide-react";
-import type { DeckAnalysis } from "../types";
+import type { DeckAnalysis, PairData } from "../types";
 import PowerRankHero from "./PowerRankHero";
 import StatsGrid from "./StatsGrid";
 import CardBreakdownTable from "./CardBreakdownTable";
+import SwapTester from "./SwapTester";
 
 interface ResultsDashboardProps {
   results: DeckAnalysis;
+  pairData?: PairData | null;
+  cards?: string[];
   onSave?: () => Promise<void>;
+  onSwap?: (oldCard: string, newCard: string) => void;
 }
 
-export default function ResultsDashboard({ results, onSave }: ResultsDashboardProps) {
+export default function ResultsDashboard({ results, pairData, cards, onSave, onSwap }: ResultsDashboardProps) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<string | null>(null);
 
   async function handleSave() {
     if (!onSave) return;
@@ -54,7 +59,23 @@ export default function ResultsDashboard({ results, onSave }: ResultsDashboardPr
         </div>
       )}
       <StatsGrid stats={results} />
-      <CardBreakdownTable breakdown={results.cardBreakdown} />
+      {pairData && cards && onSwap && (
+        <SwapTester
+          cards={cards}
+          pairData={pairData}
+          selectedCard={selectedCard}
+          onClearSelection={() => setSelectedCard(null)}
+          onConfirmSwap={(oldCard, newCard) => {
+            onSwap(oldCard, newCard);
+            setSelectedCard(null);
+          }}
+        />
+      )}
+      <CardBreakdownTable
+        breakdown={results.cardBreakdown}
+        selectedCard={selectedCard}
+        onSelectCard={pairData ? setSelectedCard : undefined}
+      />
     </div>
   );
 }

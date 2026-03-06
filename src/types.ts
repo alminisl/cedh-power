@@ -35,6 +35,14 @@ export interface HistoryEntry {
   cards: string[];
 }
 
+export interface SwapResult {
+  oldCard: string;
+  newCard: string;
+  oldPower: number;
+  newPower: number;
+  diff: number;
+}
+
 export interface CardStat {
   name: string;
   pairs: number;

@@ -74,10 +74,8 @@ export default function LeaderboardPage({ pairData }: LeaderboardPageProps) {
   const columns: { key: SortKey; label: string }[] = [
     { key: "name", label: "Card Name" },
     { key: "avgPower", label: "Avg Power" },
-    { key: "totalPower", label: "Total Power" },
     { key: "pairs", label: "Pairs" },
     { key: "totalConf", label: "Total Conf" },
-    { key: "totalLogMult", label: "Total LogMult" },
   ];
 
   return (
@@ -187,15 +185,9 @@ export default function LeaderboardPage({ pairData }: LeaderboardPageProps) {
                     <td className="py-2 font-mono">
                       {card.avgPower.toFixed(4)}
                     </td>
-                    <td className="py-2 font-mono">
-                      {card.totalPower.toFixed(2)}
-                    </td>
                     <td className="py-2">{card.pairs}</td>
                     <td className="py-2 font-mono">
                       {card.totalConf.toLocaleString()}
-                    </td>
-                    <td className="py-2 font-mono">
-                      {card.totalLogMult.toFixed(2)}
                     </td>
                     <td className="py-2">
                       <div className="flex items-center gap-2">

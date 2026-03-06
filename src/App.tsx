@@ -10,6 +10,8 @@ import LeaderboardPage from "./pages/LeaderboardPage";
 import DecksPage from "./pages/DecksPage";
 import DeckViewPage from "./pages/DeckViewPage";
 import FeedbackButton from "./components/FeedbackButton";
+import Footer from "./components/Footer";
+import AboutPage from "./pages/AboutPage";
 import { usePairData } from "./hooks/usePairData";
 import { useHistory } from "./hooks/useHistory";
 import { useCustomPairs } from "./hooks/useCustomPairs";
@@ -20,7 +22,7 @@ import { mergePairData } from "./lib/mergePairData";
 import type { DeckAnalysis, HistoryEntry } from "./types";
 import type { Decklist } from "./hooks/useDecklists";
 
-const ADMIN_EMAILS = ["oromier@gmail.com"];
+const ADMIN_EMAILS = ["oromier@gmail.com", "mansbredelius@gmail.com"];
 
 export default function App() {
   const { user } = useAuth();
@@ -69,10 +71,22 @@ export default function App() {
     handleAnalyze(entry.cards, entry.commander ?? "");
   }
 
+  function handleSwap(oldCard: string, newCard: string) {
+    if (!mergedData) return;
+    const newCards = currentCards.map((c) => (c === oldCard ? newCard : c));
+    const newText = newCards.map((c) => "1 " + c).join("\n");
+    setDeckText(newText);
+    setCurrentCards(newCards);
+    const analysis = analyzeDeck(newCards, mergedData);
+    setResults(analysis);
+  }
+
   function handleDeckSelect(deck: Decklist) {
     if (!deck.cards || !mergedData) return;
     const text = deck.cards.map((c) => "1 " + c).join("\n");
     setDeckText(text);
+    setCurrentCards(deck.cards);
+    setCurrentCommander(deck.commander ?? "");
     const analysis = analyzeDeck(deck.cards, mergedData);
     setResults(analysis);
     setTimeout(() => {
@@ -94,14 +108,15 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <Header customPairCount={customPairCount} isAdmin={isAdmin} />
+      <div className="flex-1">
       <Routes>
         <Route
           path="/"
           element={
             <main className="max-w-7xl mx-auto px-4 py-8">
-              <div className="flex gap-6">
+              <div className="flex gap-3">
                 <div className="flex-1 min-w-0 space-y-8">
                   {loading ? (
                     <div className="flex flex-col items-center justify-center py-32 gap-4">
@@ -117,7 +132,10 @@ export default function App() {
                         <div ref={resultsRef}>
                           <ResultsDashboard
                             results={results}
+                            pairData={mergedData}
+                            cards={currentCards}
                             onSave={user ? handleSaveDeck : undefined}
+                            onSwap={handleSwap}
                           />
                         </div>
                       )}
@@ -171,7 +189,13 @@ export default function App() {
           path="/leaderboard"
           element={<LeaderboardPage pairData={mergedData} />}
         />
+        <Route
+          path="/about"
+          element={<AboutPage />}
+        />
       </Routes>
+      </div>
+      <Footer />
       <FeedbackButton />
     </div>
   );
