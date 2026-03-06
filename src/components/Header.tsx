@@ -24,6 +24,7 @@ export default function Header({ customPairCount = 0, isAdmin = false }: HeaderP
         <Link to="/" className="flex items-center gap-2 shrink-0">
           <Zap className="w-6 h-6 text-accent" />
           <h1 className="text-lg font-bold tracking-tight">cEDH Power Ranker</h1>
+          <span className="text-[10px] font-bold uppercase tracking-wider bg-accent/20 text-accent px-1.5 py-0.5 rounded">Alpha</span>
         </Link>
 
         <nav className="flex items-center gap-1 ml-auto">

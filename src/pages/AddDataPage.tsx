@@ -1,6 +1,6 @@
 import { useState, useRef, type FormEvent } from "react";
 import { Plus, Upload, Trash2, FileText, Code, Database, Loader2, CheckCircle } from "lucide-react";
-import { parsePairDataFromParquet } from "../lib/uploadPairData";
+import { uploadPairData } from "../lib/uploadPairData";
 import type { PairData, PairStats } from "../types";
 
 function formatBytes(bytes: number): string {
@@ -70,10 +70,10 @@ export default function AddDataPage({
     setParquetUploading(true);
 
     try {
-      const { pairData, pairCount, cardCount } = await parsePairDataFromParquet(file);
+      const { pairData, pairCount, cardCount } = await uploadPairData(file);
       onReplacePairData?.(pairData);
       setParquetSuccess(
-        `Loaded ${pairCount.toLocaleString()} pairs across ${cardCount.toLocaleString()} cards (${formatBytes(file.size)})`
+        `Uploaded ${pairCount.toLocaleString()} pairs across ${cardCount.toLocaleString()} cards (${formatBytes(file.size)})`
       );
     } catch (err) {
       setParquetError((err as Error).message);

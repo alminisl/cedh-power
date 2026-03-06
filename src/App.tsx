@@ -9,6 +9,7 @@ import AddDataPage from "./pages/AddDataPage";
 import LeaderboardPage from "./pages/LeaderboardPage";
 import DecksPage from "./pages/DecksPage";
 import DeckViewPage from "./pages/DeckViewPage";
+import FeedbackButton from "./components/FeedbackButton";
 import { usePairData } from "./hooks/usePairData";
 import { useHistory } from "./hooks/useHistory";
 import { useCustomPairs } from "./hooks/useCustomPairs";
@@ -171,6 +172,7 @@ export default function App() {
           element={<LeaderboardPage pairData={mergedData} />}
         />
       </Routes>
+      <FeedbackButton />
     </div>
   );
 }
