@@ -64,44 +64,56 @@ export default function DeckViewPage({ pairData }: DeckViewPageProps) {
   }
 
   return (
-    <main className="max-w-7xl mx-auto px-4 py-8 space-y-6">
-      <Link
-        to="/decks"
-        className="flex items-center gap-2 text-sm text-text-muted hover:text-text transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to decks
-      </Link>
-      <div className="flex items-center gap-3 flex-wrap">
-        <Swords className="w-6 h-6 text-accent" />
-        <h1 className="text-2xl font-bold">
-          {deck.commander || "Unnamed Deck"}
-        </h1>
-        <span className="text-sm text-text-muted">
-          {deck.cards.length} cards
-        </span>
-        <button
-          onClick={handleShare}
-          className={`flex items-center gap-1.5 ml-auto px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-            copied
-              ? "bg-green-500/20 text-green-400 border border-green-500/40"
-              : "glass text-text-muted hover:text-text border border-border"
-          }`}
+    <div className="relative">
+      {deck.commander && (
+        <>
+          <img
+            src={`https://api.scryfall.com/cards/named?format=image&exact=${encodeURIComponent(deck.commander)}&version=art_crop`}
+            alt=""
+            className="absolute inset-x-0 top-0 w-full h-72 object-cover opacity-15"
+          />
+          <div className="absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-transparent via-bg/70 to-bg" />
+        </>
+      )}
+      <main className="relative max-w-7xl mx-auto px-4 py-8 space-y-6">
+        <Link
+          to="/decks"
+          className="flex items-center gap-2 text-sm text-text-muted hover:text-text transition-colors"
         >
-          {copied ? (
-            <>
-              <CheckCircle className="w-3.5 h-3.5" />
-              Link copied
-            </>
-          ) : (
-            <>
-              <Share2 className="w-3.5 h-3.5" />
-              Share
-            </>
-          )}
-        </button>
-      </div>
-      {analysis && <ResultsDashboard results={analysis} />}
-    </main>
+          <ArrowLeft className="w-4 h-4" />
+          Back to decks
+        </Link>
+        <div className="flex items-center gap-3 flex-wrap">
+          <Swords className="w-6 h-6 text-accent" />
+          <h1 className="text-2xl font-bold">
+            {deck.commander || "Unnamed Deck"}
+          </h1>
+          <span className="text-sm text-text-muted">
+            {deck.cards.length} cards
+          </span>
+          <button
+            onClick={handleShare}
+            className={`flex items-center gap-1.5 ml-auto px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+              copied
+                ? "bg-green-500/20 text-green-400 border border-green-500/40"
+                : "glass text-text-muted hover:text-text border border-border"
+            }`}
+          >
+            {copied ? (
+              <>
+                <CheckCircle className="w-3.5 h-3.5" />
+                Link copied
+              </>
+            ) : (
+              <>
+                <Share2 className="w-3.5 h-3.5" />
+                Share
+              </>
+            )}
+          </button>
+        </div>
+        {analysis && <ResultsDashboard results={analysis} />}
+      </main>
+    </div>
   );
 }

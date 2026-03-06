@@ -207,64 +207,74 @@ export default function DecksPage() {
             <Link
               key={deck.id}
               to={`/decks/${deck.id}`}
-              className="glass rounded-xl p-5 hover:bg-surface-light/50 transition-colors border border-border/50 hover:border-accent/30 group block"
+              className="relative rounded-xl overflow-hidden border border-border/50 hover:border-accent/30 group block transition-colors"
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2 min-w-0 pr-2">
-                  <ColorPips colors={deck.color_identity ?? []} />
-                  <h3 className="font-semibold truncate">
-                    {deck.commander || "Unnamed Deck"}
-                  </h3>
-                </div>
-                {confirmDeleteId === deck.id ? (
-                  <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.preventDefault()}>
-                    <button
-                      onClick={() => { deleteDeck(deck.id); setConfirmDeleteId(null); }}
-                      className="text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer"
-                    >
-                      Delete
-                    </button>
-                    <button
-                      onClick={() => setConfirmDeleteId(null)}
-                      className="text-xs text-text-muted hover:text-text cursor-pointer ml-1"
-                    >
-                      Cancel
-                    </button>
+              {deck.commander && (
+                <img
+                  src={`https://api.scryfall.com/cards/named?format=image&exact=${encodeURIComponent(deck.commander)}&version=art_crop`}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover opacity-15 group-hover:opacity-25 transition-opacity"
+                />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/80 to-transparent" />
+              <div className="relative p-5">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2 min-w-0 pr-2">
+                    <ColorPips colors={deck.color_identity ?? []} />
+                    <h3 className="font-semibold truncate">
+                      {deck.commander || "Unnamed Deck"}
+                    </h3>
                   </div>
-                ) : (
-                  <button
-                    onClick={(e) => { e.preventDefault(); setConfirmDeleteId(deck.id); }}
-                    className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-red-400 transition-all cursor-pointer shrink-0"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
+                  {confirmDeleteId === deck.id ? (
+                    <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.preventDefault()}>
+                      <button
+                        onClick={() => { deleteDeck(deck.id); setConfirmDeleteId(null); }}
+                        className="text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="text-xs text-text-muted hover:text-text cursor-pointer ml-1"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={(e) => { e.preventDefault(); setConfirmDeleteId(deck.id); }}
+                      className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-red-400 transition-all cursor-pointer shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
 
-              <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-                <div>
-                  <span className="text-text-muted">Power Rank</span>
-                  <p className="font-mono font-semibold text-accent">
-                    {deck.power_rank.toFixed(2)}
-                  </p>
+                <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                  <div title="Overall power score based on how strong your card pairs are together">
+                    <span className="text-text-muted">Power Rank</span>
+                    <p className="font-mono font-semibold text-accent">
+                      {deck.power_rank.toFixed(2)}
+                    </p>
+                  </div>
+                  <div title="Total number of cards in this decklist">
+                    <span className="text-text-muted">Cards</span>
+                    <p className="font-mono font-semibold">{deck.cards.length}</p>
+                  </div>
+                  <div title="Number of card pairs in this deck that have known synergy data">
+                    <span className="text-text-muted">Pairs Found</span>
+                    <p className="font-mono">{deck.pairs_found.toLocaleString()}</p>
+                  </div>
+                  <div title="Number of card pairs with no synergy data — these couldn't be scored">
+                    <span className="text-text-muted">Missing</span>
+                    <p className="font-mono">{deck.pairs_missing.toLocaleString()}</p>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-text-muted">Cards</span>
-                  <p className="font-mono font-semibold">{deck.cards.length}</p>
-                </div>
-                <div>
-                  <span className="text-text-muted">Pairs Found</span>
-                  <p className="font-mono">{deck.pairs_found.toLocaleString()}</p>
-                </div>
-                <div>
-                  <span className="text-text-muted">Missing</span>
-                  <p className="font-mono">{deck.pairs_missing.toLocaleString()}</p>
-                </div>
-              </div>
 
-              <p className="text-xs text-text-muted/60">
-                {formatTime(deck.updated_at)}
-              </p>
+                <p className="text-xs text-text-muted/60">
+                  {formatTime(deck.updated_at)}
+                </p>
+              </div>
             </Link>
           ))}
         </div>
