@@ -14,7 +14,9 @@
       "Bash(npm run:*)",
       "Bash(psql:*)",
       "Bash(curl:*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(grep:*)",
+      "WebFetch(domain:bucket.cedhpower.com)"
     ]
   }
 }

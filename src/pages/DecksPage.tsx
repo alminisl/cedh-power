@@ -222,7 +222,7 @@ export default function DecksPage() {
                   <div className="flex items-center gap-2 min-w-0 pr-2">
                     <ColorPips colors={deck.color_identity ?? []} />
                     <h3 className="font-semibold truncate">
-                      {deck.commander || "Unnamed Deck"}
+                      {deck.deck_name || deck.commander || "Unnamed Deck"}
                     </h3>
                   </div>
                   {confirmDeleteId === deck.id ? (

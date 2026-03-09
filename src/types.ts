@@ -51,3 +51,13 @@ export interface CardStat {
   totalLogMult: number;
   avgPower: number;
 }
+
+export interface ParquetVersion {
+  r2_key: string;
+  size: number;
+  uploaded: string;
+  original_filename: string | null;
+  pair_count: number;
+  card_count: number;
+  uploaded_by: string | null;
+}

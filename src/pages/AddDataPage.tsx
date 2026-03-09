@@ -1,12 +1,28 @@
 import { useState, useRef, type FormEvent } from "react";
-import { Plus, Upload, Trash2, FileText, Code, Database, Loader2, CheckCircle } from "lucide-react";
+import { Plus, Upload, Trash2, FileText, Code, Database, Loader2, CheckCircle, History, RotateCcw } from "lucide-react";
 import { uploadPairData } from "../lib/uploadPairData";
+import { parseParquetFile } from "../lib/parseParquet";
+import { useParquetVersions } from "../hooks/useParquetVersions";
+import { useAuth } from "../context/AuthContext";
 import type { PairData, PairStats } from "../types";
+
+const WORKER_URL = "https://bucket.cedhpower.com";
+const UPLOAD_SECRET = import.meta.env.VITE_UPLOAD_SECRET;
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return bytes + " B";
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 interface AddDataPageProps {
@@ -26,7 +42,8 @@ export default function AddDataPage({
   onClearAll,
   onReplacePairData,
 }: AddDataPageProps) {
-  const [tab, setTab] = useState<"parquet" | "manual" | "bulk">("parquet");
+  const { user } = useAuth();
+  const [tab, setTab] = useState<"parquet" | "manual" | "bulk" | "versions">("parquet");
 
   // Parquet upload state
   const [parquetUploading, setParquetUploading] = useState(false);
@@ -53,6 +70,12 @@ export default function AddDataPage({
 
   const [confirmClear, setConfirmClear] = useState(false);
 
+  // Versions state
+  const { versions, loading: versionsLoading, refetch: refetchVersions } = useParquetVersions();
+  const [activatingKey, setActivatingKey] = useState<string | null>(null);
+  const [versionError, setVersionError] = useState("");
+  const [confirmActivateKey, setConfirmActivateKey] = useState<string | null>(null);
+
   const pairEntries = Object.entries(customPairs);
   const storageSize = formatBytes(
     new Blob([JSON.stringify(customPairs)]).size
@@ -70,15 +93,57 @@ export default function AddDataPage({
     setParquetUploading(true);
 
     try {
-      const { pairData, pairCount, cardCount } = await uploadPairData(file);
+      const { pairData, pairCount, cardCount } = await uploadPairData(
+        file,
+        user?.email ?? undefined
+      );
       onReplacePairData?.(pairData);
       setParquetSuccess(
-        `Uploaded ${pairCount.toLocaleString()} pairs across ${cardCount.toLocaleString()} cards (${formatBytes(file.size)})`
+        `Replaced pair data: ${pairCount.toLocaleString()} pairs across ${cardCount.toLocaleString()} cards (${formatBytes(file.size)})`
       );
+      refetchVersions();
     } catch (err) {
       setParquetError((err as Error).message);
     } finally {
       setParquetUploading(false);
+    }
+  }
+
+  // --- Activate version ---
+  async function handleActivateVersion(r2Key: string) {
+    setActivatingKey(r2Key);
+    setVersionError("");
+    setConfirmActivateKey(null);
+
+    try {
+      // 1. Fetch parquet from worker
+      const res = await fetch(`${WORKER_URL}/parquet-version/${encodeURIComponent(r2Key)}`, {
+        headers: { Authorization: `Bearer ${UPLOAD_SECRET}` },
+      });
+      if (!res.ok) throw new Error(`Failed to fetch parquet: ${res.status}`);
+      const blob = await res.blob();
+      const file = new File([blob], "version.parquet");
+
+      // 2. Parse parquet client-side
+      const pairData = await parseParquetFile(file);
+
+      // 3. Upload parsed JSON as active pair data
+      const jsonRes = await fetch(`${WORKER_URL}/pair-data`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${UPLOAD_SECRET}`,
+        },
+        body: JSON.stringify(pairData),
+      });
+      if (!jsonRes.ok) throw new Error(`Failed to update active data: ${jsonRes.status}`);
+
+      // 4. Replace in-memory data
+      onReplacePairData?.(pairData);
+    } catch (err) {
+      setVersionError((err as Error).message);
+    } finally {
+      setActivatingKey(null);
     }
   }
 
@@ -180,7 +245,7 @@ export default function AddDataPage({
       <h1 className="text-2xl font-bold">Manage Data</h1>
 
       {/* Tabs */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <button
           onClick={() => setTab("parquet")}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -191,6 +256,17 @@ export default function AddDataPage({
         >
           <Database className="w-4 h-4 inline mr-1 -mt-0.5" />
           Upload Parquet
+        </button>
+        <button
+          onClick={() => setTab("versions")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            tab === "versions"
+              ? "bg-accent text-white"
+              : "glass text-text-muted hover:text-text"
+          }`}
+        >
+          <History className="w-4 h-4 inline mr-1 -mt-0.5" />
+          Versions
         </button>
         <button
           onClick={() => setTab("manual")}
@@ -223,7 +299,7 @@ export default function AddDataPage({
             <h2 className="text-base font-semibold mb-1">Upload Parquet File</h2>
             <p className="text-sm text-text-muted">
               Upload <code className="text-accent">big_output.parquet</code> to replace the global pair data.
-              The file is parsed in your browser and stored for all users.
+              The file is parsed in your browser, stored for all users, and the raw parquet is saved as a version backup.
             </p>
           </div>
 
@@ -266,6 +342,104 @@ export default function AddDataPage({
               <CheckCircle className="w-4 h-4" />
               {parquetSuccess}
             </p>
+          )}
+        </div>
+      )}
+
+      {/* Versions */}
+      {tab === "versions" && (
+        <div className="glass rounded-xl p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-semibold mb-1">Data Versions</h2>
+              <p className="text-sm text-text-muted">
+                View all uploaded parquet versions. Activate any version to make it the live dataset.
+              </p>
+            </div>
+            <button
+              onClick={refetchVersions}
+              className="text-xs text-text-muted hover:text-text transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Refresh
+            </button>
+          </div>
+
+          {versionError && <p className="text-sm text-red-400">{versionError}</p>}
+
+          {versionsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 text-accent animate-spin" />
+            </div>
+          ) : versions.length === 0 ? (
+            <p className="text-sm text-text-muted text-center py-8">
+              No versions found. Upload a parquet file to create the first version.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {versions.map((v, i) => (
+                <div
+                  key={v.r2_key}
+                  className={`rounded-lg border p-4 transition-colors ${
+                    i === 0
+                      ? "border-green-500/40 bg-green-500/5"
+                      : "border-border bg-surface-light/30"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-medium truncate">
+                          {v.original_filename ?? v.r2_key}
+                        </span>
+                        {i === 0 && (
+                          <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-500/20 text-green-400 whitespace-nowrap">
+                            Latest
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-muted">
+                        <span>{formatDate(v.uploaded)}</span>
+                        <span>{v.pair_count.toLocaleString()} pairs</span>
+                        <span>{v.card_count.toLocaleString()} cards</span>
+                        <span>{formatBytes(v.size)}</span>
+                        {v.uploaded_by && <span>by {v.uploaded_by}</span>}
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0">
+                      {i === 0 ? null : confirmActivateKey === v.r2_key ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-amber-400">Apply this version?</span>
+                          <button
+                            onClick={() => handleActivateVersion(v.r2_key)}
+                            disabled={activatingKey !== null}
+                            className="text-xs font-semibold text-accent hover:text-accent-light cursor-pointer disabled:opacity-50"
+                          >
+                            Yes
+                          </button>
+                          <button
+                            onClick={() => setConfirmActivateKey(null)}
+                            className="text-xs text-text-muted hover:text-text cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : activatingKey === v.r2_key ? (
+                        <Loader2 className="w-4 h-4 text-accent animate-spin" />
+                      ) : (
+                        <button
+                          onClick={() => setConfirmActivateKey(v.r2_key)}
+                          disabled={activatingKey !== null}
+                          className="px-3 py-1.5 text-xs font-medium rounded-lg bg-accent/10 text-accent hover:bg-accent/20 transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          Activate
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}

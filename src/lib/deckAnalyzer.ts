@@ -13,7 +13,11 @@ export function parseDeckList(text: string): string[] {
     // Parse quantity and name (e.g. "10 Mountain", "1x Sol Ring", or just "Sol Ring")
     const match = line.match(/^(\d+)x?\s+(.+)$/i);
     const qty = match ? parseInt(match[1], 10) : 1;
-    const name = match ? match[2].trim() : line.trim();
+    const rawName = match ? match[2].trim() : line.trim();
+
+    // Normalize double-faced cards: keep only the front face name
+    // e.g. "Birgi, God of Storytelling // Harnfel, Horn of Bounty" → "Birgi, God of Storytelling"
+    const name = rawName.includes(" // ") ? rawName.split(" // ")[0].trim() : rawName;
 
     if (name) {
       for (let i = 0; i < qty; i++) {

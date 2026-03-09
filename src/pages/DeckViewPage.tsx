@@ -86,7 +86,7 @@ export default function DeckViewPage({ pairData }: DeckViewPageProps) {
         <div className="flex items-center gap-3 flex-wrap">
           <Swords className="w-6 h-6 text-accent" />
           <h1 className="text-2xl font-bold">
-            {deck.commander || "Unnamed Deck"}
+            {deck.deck_name || deck.commander || "Unnamed Deck"}
           </h1>
           <span className="text-sm text-text-muted">
             {deck.cards.length} cards

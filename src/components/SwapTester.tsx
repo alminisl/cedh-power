@@ -123,7 +123,7 @@ export default function SwapTester({
 
       {swapResult && (
         <div className="space-y-3">
-          <div className="flex items-center gap-3 text-sm">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm">
             <CardTooltip cardName={swapResult.oldCard}>
               <span className="text-text-muted line-through">{swapResult.oldCard}</span>
             </CardTooltip>
@@ -133,7 +133,7 @@ export default function SwapTester({
             </CardTooltip>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <div className="flex items-center gap-2">
               {swapResult.diff > 0.0001 ? (
                 <TrendingUp className="w-4 h-4 text-green-400" />
@@ -162,7 +162,7 @@ export default function SwapTester({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleConfirm}
               className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold bg-accent hover:bg-accent-light text-white transition-colors cursor-pointer"

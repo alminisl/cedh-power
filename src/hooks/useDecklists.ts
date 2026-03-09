@@ -5,6 +5,7 @@ import type { DeckAnalysis } from "../types";
 export interface Decklist {
   id: string;
   user_id: string;
+  deck_name: string | null;
   commander: string | null;
   color_identity: string[];
   cards: string[];
@@ -53,18 +54,14 @@ export function useDecklists(userId: string | undefined) {
   }, [fetchDecklists]);
 
   const saveDeck = useCallback(
-    async (commander: string, cards: string[], analysis: DeckAnalysis) => {
+    async (commander: string, cards: string[], analysis: DeckAnalysis, deckName?: string) => {
       if (!userId) return null;
-
-      // Upsert by commander name — update if same commander exists
-      const existing = decklists.find(
-        (d) => d.commander?.toLowerCase() === commander.toLowerCase()
-      );
 
       const colorIdentity = await fetchColorIdentity(commander);
 
       const row = {
         user_id: userId,
+        deck_name: deckName || commander || null,
         commander: commander || null,
         color_identity: colorIdentity,
         cards,
@@ -76,32 +73,18 @@ export function useDecklists(userId: string | undefined) {
         updated_at: new Date().toISOString(),
       };
 
-      if (existing) {
-        const { data, error } = await supabase
-          .from("decklists")
-          .update(row)
-          .eq("id", existing.id)
-          .select()
-          .single();
-        if (!error && data) {
-          setDecklists((prev) =>
-            prev.map((d) => (d.id === existing.id ? data : d))
-          );
-        }
-        return error ? null : data;
-      } else {
-        const { data, error } = await supabase
-          .from("decklists")
-          .insert(row)
-          .select()
-          .single();
-        if (!error && data) {
-          setDecklists((prev) => [data, ...prev]);
-        }
-        return error ? null : data;
+      // Always insert as a new deck — users can save multiple variations
+      const { data, error } = await supabase
+        .from("decklists")
+        .insert(row)
+        .select()
+        .single();
+      if (!error && data) {
+        setDecklists((prev) => [data, ...prev]);
       }
+      return error ? null : data;
     },
-    [userId, decklists]
+    [userId]
   );
 
   const deleteDeck = useCallback(

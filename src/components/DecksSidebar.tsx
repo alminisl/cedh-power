@@ -130,7 +130,11 @@ function SavedDecks({
                   )}
                 </div>
               </div>
-              {deck.commander ? (
+              {deck.deck_name ? (
+                <p className="text-xs font-medium text-text truncate">
+                  {deck.deck_name}
+                </p>
+              ) : deck.commander ? (
                 <p className="text-xs font-medium text-text truncate">
                   {deck.commander}
                 </p>

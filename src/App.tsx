@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useCallback } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import Header from "./components/Header";
@@ -40,6 +40,10 @@ export default function App() {
   const { decklists, loading: decksLoading, saveDeck, deleteDeck } =
     useDecklists(user?.id);
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const toggleSidebar = useCallback(() => setSidebarOpen((v) => !v), []);
+  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+
   const customPairCount = Object.keys(customPairs).length;
 
   const mergedData = useMemo(
@@ -59,9 +63,9 @@ export default function App() {
     }, 100);
   }
 
-  async function handleSaveDeck() {
+  async function handleSaveDeck(deckName: string) {
     if (!results || !user) return;
-    await saveDeck(currentCommander, currentCards, results);
+    await saveDeck(currentCommander, currentCards, results, deckName);
   }
 
   function handleHistorySelect(entry: HistoryEntry) {
@@ -109,7 +113,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header customPairCount={customPairCount} isAdmin={isAdmin} />
+      <Header customPairCount={customPairCount} isAdmin={isAdmin} onToggleSidebar={toggleSidebar} />
       <div className="flex-1">
       <Routes>
         <Route
@@ -134,6 +138,7 @@ export default function App() {
                             results={results}
                             pairData={mergedData}
                             cards={currentCards}
+                            commander={currentCommander}
                             onSave={user ? handleSaveDeck : undefined}
                             onSwap={handleSwap}
                           />
@@ -142,19 +147,46 @@ export default function App() {
                     </>
                   )}
                 </div>
-                {user ? (
-                  <DecksSidebar
-                    decklists={decklists}
-                    loading={decksLoading}
-                    onSelect={handleDeckSelect}
-                    onDelete={deleteDeck}
-                  />
-                ) : (
-                  <DecksSidebar
-                    history={history}
-                    onClearHistory={clearHistory}
-                    onSelectHistory={handleHistorySelect}
-                  />
+
+                {/* Desktop sidebar */}
+                <div className="hidden lg:block">
+                  {user ? (
+                    <DecksSidebar
+                      decklists={decklists}
+                      loading={decksLoading}
+                      onSelect={handleDeckSelect}
+                      onDelete={deleteDeck}
+                    />
+                  ) : (
+                    <DecksSidebar
+                      history={history}
+                      onClearHistory={clearHistory}
+                      onSelectHistory={handleHistorySelect}
+                    />
+                  )}
+                </div>
+
+                {/* Mobile sidebar overlay */}
+                {sidebarOpen && (
+                  <div className="fixed inset-0 z-40 lg:hidden">
+                    <div className="absolute inset-0 bg-black/60" onClick={closeSidebar} />
+                    <div className="absolute right-0 top-0 bottom-0 w-80 max-w-[85vw] bg-bg overflow-y-auto p-4 pt-20">
+                      {user ? (
+                        <DecksSidebar
+                          decklists={decklists}
+                          loading={decksLoading}
+                          onSelect={(deck) => { handleDeckSelect(deck); closeSidebar(); }}
+                          onDelete={deleteDeck}
+                        />
+                      ) : (
+                        <DecksSidebar
+                          history={history}
+                          onClearHistory={clearHistory}
+                          onSelectHistory={(entry) => { handleHistorySelect(entry); closeSidebar(); }}
+                        />
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             </main>

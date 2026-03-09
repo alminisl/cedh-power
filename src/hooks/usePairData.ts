@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { PairData } from "../types";
 
-const WORKER_URL = import.meta.env.VITE_WORKER_URL;
+const WORKER_URL = "https://bucket.cedhpower.com";
 
 export function usePairData() {
   const [pairData, setPairData] = useState<PairData | null>(null);
