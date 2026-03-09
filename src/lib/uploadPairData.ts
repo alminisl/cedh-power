@@ -47,26 +47,7 @@ export async function uploadPairData(
   if (!jsonRes.ok) {
     throw new Error(`JSON upload failed: ${jsonRes.status} ${jsonRes.statusText}`);
   }
-  onProgress?.({ step: "uploading-json", percent: 80, label: "JSON uploaded" });
-
-  // Step 3: Upload raw parquet (80-100%)
-  onProgress?.({ step: "uploading-parquet", percent: 85, label: "Uploading parquet backup..." });
-  const parquetRes = await fetch(`${WORKER_URL}/parquet-version`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/octet-stream",
-      Authorization: `Bearer ${UPLOAD_SECRET}`,
-      "X-Original-Filename": file.name,
-      "X-Pair-Count": String(pairCount),
-      "X-Card-Count": String(cardCount),
-      "X-Uploaded-By": uploaderEmail ?? "",
-    },
-    body: await file.arrayBuffer(),
-  });
-
-  if (!parquetRes.ok) {
-    throw new Error(`Parquet upload failed: ${parquetRes.status} ${parquetRes.statusText}`);
-  }
+  onProgress?.({ step: "uploading-json", percent: 90, label: "JSON uploaded" });
 
   onProgress?.({ step: "done", percent: 100, label: "Complete!" });
   return { pairData, pairCount, cardCount };
