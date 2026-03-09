@@ -8,7 +8,7 @@ export default {
         headers: {
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Methods": "GET, PUT, OPTIONS",
-          "Access-Control-Allow-Headers": "Authorization, Content-Type",
+          "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Original-Filename, X-Pair-Count, X-Card-Count, X-Uploaded-By",
           "Access-Control-Max-Age": "86400",
         },
       });

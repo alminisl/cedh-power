@@ -4,15 +4,23 @@ import type { PairData } from "../types";
 const WORKER_URL = "https://bucket.cedhpower.com";
 const UPLOAD_SECRET = import.meta.env.VITE_UPLOAD_SECRET;
 
+export interface UploadProgress {
+  step: "parsing" | "uploading-json" | "uploading-parquet" | "done";
+  percent: number; // 0-100
+  label: string;
+}
+
 export async function uploadPairData(
   file: File,
-  uploaderEmail?: string
+  uploaderEmail?: string,
+  onProgress?: (progress: UploadProgress) => void
 ): Promise<{ pairData: PairData; pairCount: number; cardCount: number }> {
-  if (!WORKER_URL || !UPLOAD_SECRET) {
-    throw new Error("Worker URL or upload secret not configured");
+  if (!UPLOAD_SECRET) {
+    throw new Error("Upload secret not configured");
   }
 
-  // 1. Parse parquet file into pair data
+  // Step 1: Parse parquet (0-50%)
+  onProgress?.({ step: "parsing", percent: 10, label: "Parsing parquet file..." });
   const pairData = await parseParquetFile(file);
 
   const pairCount = Object.keys(pairData).length;
@@ -23,8 +31,10 @@ export async function uploadPairData(
     cardNames.add(b);
   }
   const cardCount = cardNames.size;
+  onProgress?.({ step: "parsing", percent: 50, label: `Parsed ${pairCount.toLocaleString()} pairs` });
 
-  // 2. Upload parsed JSON — fully replaces pairData.json in R2
+  // Step 2: Upload JSON (50-80%)
+  onProgress?.({ step: "uploading-json", percent: 55, label: "Uploading JSON data..." });
   const jsonRes = await fetch(`${WORKER_URL}/pair-data`, {
     method: "PUT",
     headers: {
@@ -37,8 +47,10 @@ export async function uploadPairData(
   if (!jsonRes.ok) {
     throw new Error(`JSON upload failed: ${jsonRes.status} ${jsonRes.statusText}`);
   }
+  onProgress?.({ step: "uploading-json", percent: 80, label: "JSON uploaded" });
 
-  // 3. Upload raw parquet file for version history (with metadata in headers)
+  // Step 3: Upload raw parquet (80-100%)
+  onProgress?.({ step: "uploading-parquet", percent: 85, label: "Uploading parquet backup..." });
   const parquetRes = await fetch(`${WORKER_URL}/parquet-version`, {
     method: "PUT",
     headers: {
@@ -56,5 +68,6 @@ export async function uploadPairData(
     throw new Error(`Parquet upload failed: ${parquetRes.status} ${parquetRes.statusText}`);
   }
 
+  onProgress?.({ step: "done", percent: 100, label: "Complete!" });
   return { pairData, pairCount, cardCount };
 }

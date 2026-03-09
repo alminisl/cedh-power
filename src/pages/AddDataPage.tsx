@@ -1,6 +1,6 @@
 import { useState, useRef, type FormEvent } from "react";
 import { Plus, Upload, Trash2, FileText, Code, Database, Loader2, CheckCircle, History, RotateCcw } from "lucide-react";
-import { uploadPairData } from "../lib/uploadPairData";
+import { uploadPairData, type UploadProgress } from "../lib/uploadPairData";
 import { parseParquetFile } from "../lib/parseParquet";
 import { useParquetVersions } from "../hooks/useParquetVersions";
 import { useAuth } from "../context/AuthContext";
@@ -50,6 +50,7 @@ export default function AddDataPage({
   const [parquetError, setParquetError] = useState("");
   const [parquetSuccess, setParquetSuccess] = useState("");
   const [parquetFileName, setParquetFileName] = useState("");
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const parquetRef = useRef<HTMLInputElement>(null);
 
   // Manual entry state
@@ -91,11 +92,13 @@ export default function AddDataPage({
     setParquetError("");
     setParquetSuccess("");
     setParquetUploading(true);
+    setUploadProgress(null);
 
     try {
       const { pairData, pairCount, cardCount } = await uploadPairData(
         file,
-        user?.email ?? undefined
+        user?.email ?? undefined,
+        setUploadProgress
       );
       onReplacePairData?.(pairData);
       setParquetSuccess(
@@ -106,6 +109,9 @@ export default function AddDataPage({
       setParquetError((err as Error).message);
     } finally {
       setParquetUploading(false);
+      if (!parquetError) {
+        setTimeout(() => setUploadProgress(null), 3000);
+      }
     }
   }
 
@@ -312,11 +318,19 @@ export default function AddDataPage({
             }`}
           >
             {parquetUploading ? (
-              <div className="flex flex-col items-center gap-3">
+              <div className="flex flex-col items-center gap-4 w-full max-w-md mx-auto">
                 <Loader2 className="w-8 h-8 text-accent animate-spin" />
                 <p className="text-sm text-text-muted">
-                  Parsing & uploading <span className="text-text font-medium">{parquetFileName}</span>...
+                  {uploadProgress?.label ?? "Starting..."}{" "}
+                  <span className="text-text font-medium">{parquetFileName}</span>
                 </p>
+                <div className="w-full bg-border/40 rounded-full h-2.5 overflow-hidden">
+                  <div
+                    className="h-full bg-accent rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${uploadProgress?.percent ?? 0}%` }}
+                  />
+                </div>
+                <span className="text-xs text-text-muted">{uploadProgress?.percent ?? 0}%</span>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-3">
