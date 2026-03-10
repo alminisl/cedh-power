@@ -3,6 +3,9 @@ import { Search, ArrowUpDown, Trophy, SlidersHorizontal } from "lucide-react";
 import { aggregateCardStats } from "../lib/aggregateCardStats";
 import type { PairData, CardStat } from "../types";
 import CardTooltip from "../components/CardTooltip";
+import landNames from "../data/landNames.json";
+
+const landNameSet = new Set<string>(landNames);
 
 function getQuartileColor(value: number, min: number, max: number): string {
   const range = max - min;
@@ -28,6 +31,7 @@ export default function LeaderboardPage({ pairData }: LeaderboardPageProps) {
   const [sortKey, setSortKey] = useState<SortKey>("avgPower");
   const [sortAsc, setSortAsc] = useState(false);
   const [page, setPage] = useState(0);
+  const [hideLands, setHideLands] = useState(false);
 
   const allCards = useMemo(
     () => (pairData ? aggregateCardStats(pairData) : []),
@@ -47,6 +51,9 @@ export default function LeaderboardPage({ pairData }: LeaderboardPageProps) {
 
   const sorted = useMemo(() => {
     let filtered = allCards.filter((c) => c.pairs >= minPairs);
+    if (hideLands) {
+      filtered = filtered.filter((c) => !landNameSet.has(c.name));
+    }
     if (filter) {
       const lc = filter.toLowerCase();
       filtered = filtered.filter((c) => c.name.toLowerCase().includes(lc));
@@ -58,7 +65,7 @@ export default function LeaderboardPage({ pairData }: LeaderboardPageProps) {
         return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
       return sortAsc ? (av as number) - (bv as number) : (bv as number) - (av as number);
     });
-  }, [allCards, filter, minPairs, sortKey, sortAsc]);
+  }, [allCards, filter, hideLands, minPairs, sortKey, sortAsc]);
 
   const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
   const pageItems = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -130,6 +137,18 @@ export default function LeaderboardPage({ pairData }: LeaderboardPageProps) {
               className="w-14 bg-bg border border-border rounded-lg px-2 py-1 text-sm text-text text-center focus:outline-none focus:border-accent transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
           </div>
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={hideLands}
+              onChange={(e) => {
+                setHideLands(e.target.checked);
+                setPage(0);
+              }}
+              className="accent-accent w-4 h-4 cursor-pointer"
+            />
+            <span className="text-xs text-text-muted whitespace-nowrap">Hide Lands</span>
+          </label>
           <span className="text-xs text-text-muted">
             {sorted.length} result{sorted.length !== 1 ? "s" : ""}
           </span>

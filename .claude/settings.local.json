@@ -16,7 +16,8 @@
       "Bash(curl:*)",
       "Bash(git:*)",
       "Bash(grep:*)",
-      "WebFetch(domain:bucket.cedhpower.com)"
+      "WebFetch(domain:bucket.cedhpower.com)",
+      "Bash(nslookup bucket.cedhpower.com 1.1.1.1 2>&1)"
     ]
   }
 }

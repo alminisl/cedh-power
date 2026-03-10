@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "sync-data": "curl -s https://bucket.cedhpower.com/pair-data -o src/data/pairData.json",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "convert": "python scripts/convert_parquet.py"
+    "convert": "python scripts/convert_parquet.py",
+    "fetch-lands": "node scripts/fetchLandNames.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
