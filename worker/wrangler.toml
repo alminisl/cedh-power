@@ -9,7 +9,3 @@ zone_name = "cedhpower.com"
 [[r2_buckets]]
 binding = "PAIR_DATA"
 bucket_name = "cedh-pair-data"
-
-[[r2_buckets]]
-binding = "PARQUET_VERSIONS"
-bucket_name = "cedhpower"
