@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parquetRead } from "hyparquet";
-import { writeFile } from "fs/promises";
-import path from "path";
 
 export const maxDuration = 300;
 
@@ -55,27 +53,18 @@ export async function POST(request: NextRequest) {
     }
     const cardCount = cardNames.size;
 
-    // Upload parsed JSON to Cloudflare R2
-    const workerUrl = process.env.WORKER_URL || "https://bucket.cedhpower.com";
-    const uploadRes = await fetch(`${workerUrl}/pair-data`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.UPLOAD_SECRET}`,
-      },
-      body: JSON.stringify(pairData),
-    });
+    // Upload parsed JSON directly to R2
+    const { PutObjectCommand } = await import("@aws-sdk/client-s3");
+    const { r2, R2_BUCKET } = await import("../../../lib/r2");
 
-    if (!uploadRes.ok) {
-      return NextResponse.json(
-        { error: `Upload to storage failed: ${uploadRes.status} ${uploadRes.statusText}` },
-        { status: 500 },
-      );
-    }
-
-    // Also save to disk as pairData.json
-    const jsonPath = path.join(process.cwd(), "src", "data", "pairData.json");
-    await writeFile(jsonPath, JSON.stringify(pairData));
+    await r2.send(
+      new PutObjectCommand({
+        Bucket: R2_BUCKET,
+        Key: "pairData.json",
+        Body: JSON.stringify(pairData),
+        ContentType: "application/json",
+      })
+    );
 
     return NextResponse.json({ pairData, pairCount, cardCount });
   } catch (err) {

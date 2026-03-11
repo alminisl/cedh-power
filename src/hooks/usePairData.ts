@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import type { PairData } from "../types";
 
-const WORKER_URL = "https://bucket.cedhpower.com";
-
 export function usePairData() {
   const [pairData, setPairData] = useState<PairData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -11,7 +9,7 @@ export function usePairData() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`${WORKER_URL}/pair-data`);
+        const res = await fetch("/api/pair-data");
         if (res.ok) {
           const json = await res.json();
           setPairData(json as PairData);

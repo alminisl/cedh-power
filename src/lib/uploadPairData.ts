@@ -58,11 +58,10 @@ export async function uploadPairData(
 
   onProgress?.({ step: "parsing", percent: 40, label: `Parsed ${pairCount.toLocaleString()} pairs. Uploading...` });
 
-  // Step 2: Upload JSON directly to R2 via Cloudflare Worker
+  // Step 2: Upload JSON to R2 via API route
   onProgress?.({ step: "uploading-json", percent: 50, label: "Uploading to storage..." });
 
-  const workerUrl = process.env.NEXT_PUBLIC_WORKER_URL || "https://bucket.cedhpower.com";
-  const uploadRes = await fetch(`${workerUrl}/pair-data`, {
+  const uploadRes = await fetch("/api/pair-data", {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",

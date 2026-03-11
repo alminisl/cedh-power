@@ -8,11 +8,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "sync-data": "curl -s https://bucket.cedhpower.com/pair-data -o src/data/pairData.json",
+    "sync-data": "curl -s http://localhost:3000/api/pair-data -o src/data/pairData.json",
     "convert": "python scripts/convert_parquet.py",
     "fetch-lands": "node scripts/fetchLandNames.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1006.0",
     "@supabase/supabase-js": "^2.98.0",
     "hyparquet": "^1.25.1",
     "lucide-react": "^0.576.0",
