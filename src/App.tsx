@@ -197,6 +197,7 @@ export default function App() {
           element={
             isAdmin ? (
               <AddDataPage
+                pairData={pairData}
                 customPairs={customPairs}
                 onAddPair={addPair}
                 onAddPairsBulk={addPairsBulk}

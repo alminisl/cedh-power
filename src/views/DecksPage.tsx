@@ -75,7 +75,7 @@ function formatTime(ts: string): string {
 
 export default function DecksPage() {
   const { user, signInWithDiscord } = useAuth();
-  const { decklists, loading, deleteDeck } = useDecklists(user?.id);
+  const { decklists, loading, deleteDeck } = useDecklists(user?.id, { allUsers: true });
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("power_rank");
   const [sortAsc, setSortAsc] = useState(false);

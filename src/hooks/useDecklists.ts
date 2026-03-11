@@ -32,22 +32,28 @@ async function fetchColorIdentity(commander: string): Promise<string[]> {
   }
 }
 
-export function useDecklists(userId: string | undefined) {
+export function useDecklists(userId: string | undefined, opts?: { allUsers?: boolean }) {
   const [decklists, setDecklists] = useState<Decklist[]>([]);
   const [loading, setLoading] = useState(false);
+  const allUsers = opts?.allUsers ?? false;
 
   const fetchDecklists = useCallback(async () => {
-    if (!userId) return;
+    if (!allUsers && !userId) return;
     setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from("decklists")
       .select("*")
-      .eq("user_id", userId)
       .order("updated_at", { ascending: false });
+
+    if (!allUsers && userId) {
+      query = query.eq("user_id", userId);
+    }
+
+    const { data, error } = await query;
 
     if (!error && data) setDecklists(data);
     setLoading(false);
-  }, [userId]);
+  }, [userId, allUsers]);
 
   useEffect(() => {
     fetchDecklists();

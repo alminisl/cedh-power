@@ -11,6 +11,7 @@ function formatBytes(bytes: number): string {
 }
 
 interface AddDataPageProps {
+  pairData: PairData | null;
   customPairs: PairData;
   onAddPair: (cardA: string, cardB: string, stats: PairStats) => void;
   onAddPairsBulk: (pairs: PairData) => void;
@@ -20,6 +21,7 @@ interface AddDataPageProps {
 }
 
 export default function AddDataPage({
+  pairData,
   customPairs,
   onAddPair,
   onAddPairsBulk,
@@ -61,9 +63,10 @@ export default function AddDataPage({
     new Blob([JSON.stringify(customPairs)]).size
   );
 
-  // Current data stats
+  // Current data stats (from R2 pair data)
   const dataStats = useMemo(() => {
-    const keys = Object.keys(customPairs);
+    if (!pairData) return null;
+    const keys = Object.keys(pairData);
     const pairCount = keys.length;
     if (pairCount === 0) return null;
 
@@ -76,7 +79,7 @@ export default function AddDataPage({
     let winRateEntries = 0;
     let countEntries = 0;
 
-    for (const [key, stats] of Object.entries(customPairs)) {
+    for (const [key, stats] of Object.entries(pairData)) {
       const [a, b] = key.split("|||");
       cardNames.add(a);
       cardNames.add(b);
@@ -99,7 +102,7 @@ export default function AddDataPage({
       totalChallenges: totalCount,
       avgChallenges: countEntries > 0 ? totalCount / countEntries : null,
     };
-  }, [customPairs]);
+  }, [pairData]);
 
   // --- Parquet upload ---
   async function handleParquetUpload(e: React.ChangeEvent<HTMLInputElement>) {
