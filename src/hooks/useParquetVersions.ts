@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import type { ParquetVersion } from "../types";
 
 const WORKER_URL = "https://bucket.cedhpower.com";
-const UPLOAD_SECRET = import.meta.env.VITE_UPLOAD_SECRET;
+const UPLOAD_SECRET = process.env.NEXT_PUBLIC_UPLOAD_SECRET;
 
 export function useParquetVersions() {
   const [versions, setVersions] = useState<ParquetVersion[]>([]);

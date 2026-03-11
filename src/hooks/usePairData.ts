@@ -10,28 +10,30 @@ export function usePairData() {
 
   useEffect(() => {
     async function load() {
-      // Try Cloudflare Worker (R2) first
-      if (WORKER_URL) {
-        try {
-          const res = await fetch(`${WORKER_URL}/pair-data`);
-          if (res.ok) {
-            const json = await res.json();
-            setPairData(json as PairData);
-            setLoading(false);
-            return;
-          }
-        } catch {
-          // Fall through to bundled data
-        }
-      }
-
-      // Fallback to bundled JSON
+      // Primary: load from bundled JSON on disk
       try {
         const module = await import("../data/pairData.json");
         setPairData(module.default as PairData);
-      } catch (err) {
-        setError((err as Error).message);
+        setLoading(false);
+        return;
+      } catch {
+        // Fall through to R2 backup
       }
+
+      // Fallback: fetch from R2 cloud backup
+      try {
+        const res = await fetch(`${WORKER_URL}/pair-data`);
+        if (res.ok) {
+          const json = await res.json();
+          setPairData(json as PairData);
+          setLoading(false);
+          return;
+        }
+      } catch {
+        // ignore
+      }
+
+      setError("Failed to load pair data");
       setLoading(false);
     }
 

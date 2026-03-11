@@ -17,7 +17,15 @@
       "Bash(git:*)",
       "Bash(grep:*)",
       "WebFetch(domain:bucket.cedhpower.com)",
-      "Bash(nslookup bucket.cedhpower.com 1.1.1.1 2>&1)"
+      "Bash(nslookup bucket.cedhpower.com 1.1.1.1 2>&1)",
+      "Bash(wc -l /c/Users/Almin/Documents/Projects/cedh-power-simple/src/pages/*.tsx)",
+      "Bash(wc -l /c/Users/Almin/Documents/Projects/cedh-power-simple/src/components/*.tsx)",
+      "Bash(cd \"C:\\\\Users\\\\Almin\\\\Documents\\\\Projects\\\\cedh-power-simple\" && mv app src/app)",
+      "Bash(cd \"C:\\\\Users\\\\Almin\\\\Documents\\\\Projects\\\\cedh-power-simple\" && rm -rf .next && npx next build 2>&1 | head -100)",
+      "Bash(cd \"C:\\\\Users\\\\Almin\\\\Documents\\\\Projects\\\\cedh-power-simple\" && rm -rf .next && npx next build 2>&1 | tail -40)",
+      "Bash(cd \"C:\\\\Users\\\\Almin\\\\Documents\\\\Projects\\\\cedh-power-simple\" && mv src/pages src/views)",
+      "Bash(cd \"C:\\\\Users\\\\Almin\\\\Documents\\\\Projects\\\\cedh-power-simple\" && rm -rf .next && npx next build 2>&1 | tail -30)",
+      "Bash(ls -la \"C:\\\\Users\\\\Almin\\\\Documents\\\\Projects\\\\cedh-power-simple\"/.env*)"
     ]
   }
 }

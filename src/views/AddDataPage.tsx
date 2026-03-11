@@ -285,7 +285,7 @@ export default function AddDataPage({
             <h2 className="text-base font-semibold mb-1">Upload Parquet File</h2>
             <p className="text-sm text-text-muted">
               Upload <code className="text-accent">big_output.parquet</code> to replace the global pair data.
-              The file is parsed in your browser and the resulting JSON is stored for all users.
+              The file is parsed on the server and the resulting JSON is stored for all users.
             </p>
           </div>
 

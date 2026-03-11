@@ -1,12 +1,8 @@
-import { parseParquetFile } from "./parseParquet";
 import type { PairData } from "../types";
-
-const WORKER_URL = "https://bucket.cedhpower.com";
-const UPLOAD_SECRET = import.meta.env.VITE_UPLOAD_SECRET;
 
 export interface UploadProgress {
   step: "parsing" | "uploading-json" | "uploading-parquet" | "done";
-  percent: number; // 0-100
+  percent: number;
   label: string;
 }
 
@@ -15,40 +11,40 @@ export async function uploadPairData(
   uploaderEmail?: string,
   onProgress?: (progress: UploadProgress) => void
 ): Promise<{ pairData: PairData; pairCount: number; cardCount: number }> {
-  if (!UPLOAD_SECRET) {
+  const secret = process.env.NEXT_PUBLIC_UPLOAD_SECRET;
+  if (!secret) {
     throw new Error("Upload secret not configured");
   }
 
-  // Step 1: Parse parquet (0-50%)
-  onProgress?.({ step: "parsing", percent: 10, label: "Parsing parquet file..." });
-  const pairData = await parseParquetFile(file);
+  // Step 1: Send file to Next.js API route for server-side parsing + upload
+  onProgress?.({ step: "parsing", percent: 10, label: "Uploading parquet file to server..." });
 
-  const pairCount = Object.keys(pairData).length;
-  const cardNames = new Set<string>();
-  for (const key of Object.keys(pairData)) {
-    const [a, b] = key.split("|||");
-    cardNames.add(a);
-    cardNames.add(b);
-  }
-  const cardCount = cardNames.size;
-  onProgress?.({ step: "parsing", percent: 50, label: `Parsed ${pairCount.toLocaleString()} pairs` });
+  const formData = new FormData();
+  formData.append("file", file);
+  if (uploaderEmail) formData.append("email", uploaderEmail);
 
-  // Step 2: Upload JSON (50-80%)
-  onProgress?.({ step: "uploading-json", percent: 55, label: "Uploading JSON data..." });
-  const jsonRes = await fetch(`${WORKER_URL}/pair-data`, {
-    method: "PUT",
+  const res = await fetch("/api/parse-parquet", {
+    method: "POST",
     headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${UPLOAD_SECRET}`,
+      Authorization: `Bearer ${secret}`,
     },
-    body: JSON.stringify(pairData),
+    body: formData,
   });
 
-  if (!jsonRes.ok) {
-    throw new Error(`JSON upload failed: ${jsonRes.status} ${jsonRes.statusText}`);
+  onProgress?.({ step: "uploading-json", percent: 70, label: "Server is parsing & uploading..." });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(body.error || `Server error: ${res.status}`);
   }
-  onProgress?.({ step: "uploading-json", percent: 90, label: "JSON uploaded" });
+
+  const result = await res.json();
 
   onProgress?.({ step: "done", percent: 100, label: "Complete!" });
-  return { pairData, pairCount, cardCount };
+
+  return {
+    pairData: result.pairData as PairData,
+    pairCount: result.pairCount,
+    cardCount: result.cardCount,
+  };
 }
