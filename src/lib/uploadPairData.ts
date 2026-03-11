@@ -58,15 +58,27 @@ export async function uploadPairData(
 
   onProgress?.({ step: "parsing", percent: 40, label: `Parsed ${pairCount.toLocaleString()} pairs. Uploading...` });
 
-  // Step 2: Upload JSON to R2 via API route
-  onProgress?.({ step: "uploading-json", percent: 50, label: "Uploading to storage..." });
+  // Step 2: Get presigned URL from server
+  onProgress?.({ step: "uploading-json", percent: 50, label: "Preparing upload..." });
 
-  const uploadRes = await fetch("/api/pair-data", {
+  const urlRes = await fetch("/api/upload-url", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${secret}` },
+  });
+
+  if (!urlRes.ok) {
+    const err = await urlRes.json().catch(() => ({}));
+    throw new Error(`Failed to get upload URL: ${urlRes.status} ${err.error || ""}`);
+  }
+
+  const { url } = await urlRes.json();
+
+  // Step 3: Upload JSON directly to R2 via presigned URL
+  onProgress?.({ step: "uploading-json", percent: 60, label: "Uploading to storage..." });
+
+  const uploadRes = await fetch(url, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${secret}`,
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(pairData),
   });
 
