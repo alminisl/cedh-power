@@ -10,17 +10,6 @@ export function usePairData() {
 
   useEffect(() => {
     async function load() {
-      // Primary: load from bundled JSON on disk
-      try {
-        const module = await import("../data/pairData.json");
-        setPairData(module.default as PairData);
-        setLoading(false);
-        return;
-      } catch {
-        // Fall through to R2 backup
-      }
-
-      // Fallback: fetch from R2 cloud backup
       try {
         const res = await fetch(`${WORKER_URL}/pair-data`);
         if (res.ok) {
