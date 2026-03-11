@@ -395,7 +395,7 @@ export default function AddDataPage({
                 )}
                 {dataStats.avgChallenges != null && (
                   <div className="rounded-lg border border-border bg-surface-light/30 p-4">
-                    <p className="text-xs text-text-muted mb-1">Avg Challenges</p>
+                    <p className="text-xs text-text-muted mb-1">Avg Matches</p>
                     <p className="text-lg font-semibold font-mono">{dataStats.avgChallenges.toFixed(0)}</p>
                   </div>
                 )}
@@ -403,7 +403,7 @@ export default function AddDataPage({
 
               {dataStats.totalChallenges > 0 && (
                 <div className="rounded-lg border border-border bg-surface-light/30 p-4">
-                  <p className="text-xs text-text-muted mb-1">Total Challenges</p>
+                  <p className="text-xs text-text-muted mb-1">Total Matches</p>
                   <p className="text-xl font-bold">{dataStats.totalChallenges.toLocaleString()}</p>
                 </div>
               )}
