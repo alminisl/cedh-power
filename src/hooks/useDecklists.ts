@@ -42,6 +42,7 @@ export function useDecklists(userId: string | undefined) {
     const { data, error } = await supabase
       .from("decklists")
       .select("*")
+      .eq("user_id", userId)
       .order("updated_at", { ascending: false });
 
     if (!error && data) setDecklists(data);
