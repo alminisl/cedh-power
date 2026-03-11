@@ -44,8 +44,11 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : undefined;
+    const name = err instanceof Error ? err.name : undefined;
     return NextResponse.json(
-      { error: (err as Error).message },
+      { error: msg, name, stack, bucket: R2_BUCKET },
       { status: 500 }
     );
   }
