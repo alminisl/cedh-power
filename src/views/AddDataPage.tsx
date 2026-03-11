@@ -1,6 +1,8 @@
 import { useState, useRef, useMemo, type FormEvent } from "react";
 import { Plus, Upload, Trash2, FileText, Code, Database, Loader2, CheckCircle, BarChart3 } from "lucide-react";
 import { uploadPairData, type UploadProgress } from "../lib/uploadPairData";
+import { analyzeDeck } from "../lib/deckAnalyzer";
+import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 import type { PairData, PairStats } from "../types";
 
@@ -57,6 +59,8 @@ export default function AddDataPage({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [confirmClear, setConfirmClear] = useState(false);
+  const [reanalyzing, setReanalyzing] = useState(false);
+  const [reanalyzeResult, setReanalyzeResult] = useState("");
 
   const pairEntries = Object.entries(customPairs);
   const storageSize = formatBytes(
@@ -104,6 +108,41 @@ export default function AddDataPage({
     };
   }, [pairData]);
 
+  async function handleReanalyze() {
+    if (!pairData) return;
+    setReanalyzing(true);
+    setReanalyzeResult("");
+    try {
+      const { data: allDecks } = await supabase
+        .from("decklists")
+        .select("id, cards");
+
+      let count = 0;
+      if (allDecks && allDecks.length > 0) {
+        for (const deck of allDecks) {
+          const analysis = analyzeDeck(deck.cards, pairData);
+          await supabase
+            .from("decklists")
+            .update({
+              power_rank: analysis.totalPowerRank,
+              average_pair_power: analysis.averagePairPower,
+              pairs_found: analysis.pairsFound,
+              pairs_missing: analysis.pairsMissing,
+              total_pairs: analysis.totalPairs,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", deck.id);
+          count++;
+        }
+      }
+      setReanalyzeResult(`Re-analyzed ${count} deck${count !== 1 ? "s" : ""} successfully.`);
+    } catch (err) {
+      setReanalyzeResult(`Error: ${(err as Error).message}`);
+    } finally {
+      setReanalyzing(false);
+    }
+  }
+
   // --- Parquet upload ---
   async function handleParquetUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -117,14 +156,41 @@ export default function AddDataPage({
     setUploadProgress(null);
 
     try {
-      const { pairData, pairCount, cardCount } = await uploadPairData(
+      const { pairData: newPairData, pairCount, cardCount } = await uploadPairData(
         file,
         user?.email ?? undefined,
         setUploadProgress
       );
-      onReplacePairData?.(pairData);
+      onReplacePairData?.(newPairData);
+
+      // Re-analyze all saved decks against new pair data
+      setUploadProgress({ step: "uploading-json", percent: 85, label: "Re-analyzing saved decks..." });
+
+      const { data: allDecks } = await supabase
+        .from("decklists")
+        .select("id, cards");
+
+      let reanalyzed = 0;
+      if (allDecks && allDecks.length > 0) {
+        for (const deck of allDecks) {
+          const analysis = analyzeDeck(deck.cards, newPairData);
+          await supabase
+            .from("decklists")
+            .update({
+              power_rank: analysis.totalPowerRank,
+              average_pair_power: analysis.averagePairPower,
+              pairs_found: analysis.pairsFound,
+              pairs_missing: analysis.pairsMissing,
+              total_pairs: analysis.totalPairs,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", deck.id);
+          reanalyzed++;
+        }
+      }
+
       setParquetSuccess(
-        `Replaced pair data: ${pairCount.toLocaleString()} pairs across ${cardCount.toLocaleString()} cards (${formatBytes(file.size)})`
+        `Replaced pair data: ${pairCount.toLocaleString()} pairs across ${cardCount.toLocaleString()} cards. Re-analyzed ${reanalyzed} deck${reanalyzed !== 1 ? "s" : ""}.`
       );
     } catch (err) {
       setParquetError((err as Error).message);
@@ -401,12 +467,31 @@ export default function AddDataPage({
                 )}
               </div>
 
-              {dataStats.totalChallenges > 0 && (
-                <div className="rounded-lg border border-border bg-surface-light/30 p-4">
-                  <p className="text-xs text-text-muted mb-1">Total Matches</p>
-                  <p className="text-xl font-bold">{dataStats.totalChallenges.toLocaleString()}</p>
-                </div>
-              )}
+              <div className="pt-2 border-t border-border/50">
+                <button
+                  onClick={handleReanalyze}
+                  disabled={reanalyzing}
+                  className="inline-flex items-center gap-2 bg-accent hover:bg-accent-light disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-5 py-2 rounded-lg transition-colors cursor-pointer"
+                >
+                  {reanalyzing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Re-analyzing...
+                    </>
+                  ) : (
+                    "Re-analyze All Decks"
+                  )}
+                </button>
+                <p className="text-xs text-text-muted mt-2">
+                  Recalculate scores for all saved decks using the current pair data.
+                </p>
+                {reanalyzeResult && (
+                  <p className={`text-sm mt-2 flex items-center gap-2 ${reanalyzeResult.startsWith("Error") ? "text-red-400" : "text-green-400"}`}>
+                    {!reanalyzeResult.startsWith("Error") && <CheckCircle className="w-4 h-4" />}
+                    {reanalyzeResult}
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>
