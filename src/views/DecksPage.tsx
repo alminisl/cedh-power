@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Swords, Trash2, Loader2, LogIn, ArrowUpDown } from "lucide-react";
+import { Swords, Trash2, Loader2, LogIn, ArrowUpDown, User } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useDecklists } from "../hooks/useDecklists";
 import type { Decklist } from "../hooks/useDecklists";
@@ -80,6 +80,7 @@ export default function DecksPage() {
   const [sortKey, setSortKey] = useState<SortKey>("power_rank");
   const [sortAsc, setSortAsc] = useState(false);
   const [colorFilter, setColorFilter] = useState<Set<string>>(new Set());
+  const [myDecksOnly, setMyDecksOnly] = useState(false);
 
   function toggleColor(c: string) {
     setColorFilter((prev) => {
@@ -92,8 +93,11 @@ export default function DecksPage() {
 
   const sorted = useMemo(() => {
     let filtered = decklists;
+    if (myDecksOnly && user) {
+      filtered = filtered.filter((d) => d.user_id === user.id);
+    }
     if (colorFilter.size > 0) {
-      filtered = decklists.filter((d) => {
+      filtered = filtered.filter((d) => {
         const ci = d.color_identity ?? [];
         return [...colorFilter].every((c) => ci.includes(c));
       });
@@ -112,7 +116,7 @@ export default function DecksPage() {
         return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
       return sortAsc ? (av as number) - (bv as number) : (bv as number) - (av as number);
     });
-  }, [decklists, sortKey, sortAsc, colorFilter]);
+  }, [decklists, sortKey, sortAsc, colorFilter, myDecksOnly, user]);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) setSortAsc(!sortAsc);
@@ -126,8 +130,8 @@ export default function DecksPage() {
     return (
       <main className="max-w-4xl mx-auto px-4 py-16 text-center">
         <Swords className="w-12 h-12 text-text-muted mx-auto mb-4" />
-        <h1 className="text-2xl font-bold mb-2">My Decks</h1>
-        <p className="text-text-muted mb-6">Sign in with Discord to save and view your decklists.</p>
+        <h1 className="text-2xl font-bold mb-2">Decks</h1>
+        <p className="text-text-muted mb-6">Sign in with Discord to save and view decklists.</p>
         <button
           onClick={signInWithDiscord}
           className="inline-flex items-center gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors cursor-pointer"
@@ -143,9 +147,9 @@ export default function DecksPage() {
     <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
       <div className="flex items-center gap-3 flex-wrap">
         <Swords className="w-6 h-6 text-accent" />
-        <h1 className="text-2xl font-bold">My Decks</h1>
+        <h1 className="text-2xl font-bold">{myDecksOnly ? "My Decks" : "All Decks"}</h1>
         <span className="text-sm text-text-muted">
-          {sorted.length}{colorFilter.size > 0 ? ` / ${decklists.length}` : ""} deck{sorted.length !== 1 ? "s" : ""}
+          {sorted.length}{colorFilter.size > 0 || myDecksOnly ? ` / ${decklists.length}` : ""} deck{sorted.length !== 1 ? "s" : ""}
         </span>
       </div>
 
@@ -165,7 +169,7 @@ export default function DecksPage() {
               >
                 {label}
                 {sortKey === key && (
-                  <span className="ml-0.5">{sortAsc ? "↑" : "↓"}</span>
+                  <span className="ml-0.5">{sortAsc ? "\u2191" : "\u2193"}</span>
                 )}
               </button>
             ))}
@@ -188,6 +192,17 @@ export default function DecksPage() {
               </button>
             )}
           </div>
+          <button
+            onClick={() => setMyDecksOnly(!myDecksOnly)}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+              myDecksOnly
+                ? "bg-accent/15 text-accent"
+                : "text-text-muted hover:text-text"
+            }`}
+          >
+            <User className="w-3.5 h-3.5" />
+            My Decks
+          </button>
         </div>
       )}
 
@@ -203,80 +218,85 @@ export default function DecksPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sorted.map((deck) => (
-            <Link
-              key={deck.id}
-              to={`/decks/${deck.id}`}
-              className="relative rounded-xl overflow-hidden border border-border/50 hover:border-accent/30 group block transition-colors"
-            >
-              {deck.commander && (
-                <img
-                  src={`https://api.scryfall.com/cards/named?format=image&exact=${encodeURIComponent(deck.commander)}&version=art_crop`}
-                  alt=""
-                  className="absolute inset-0 w-full h-full object-cover opacity-15 group-hover:opacity-25 transition-opacity"
-                />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/80 to-transparent" />
-              <div className="relative p-5">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2 min-w-0 pr-2">
-                    <ColorPips colors={deck.color_identity ?? []} />
-                    <h3 className="font-semibold truncate">
-                      {deck.deck_name || deck.commander || "Unnamed Deck"}
-                    </h3>
-                  </div>
-                  {confirmDeleteId === deck.id ? (
-                    <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.preventDefault()}>
-                      <button
-                        onClick={() => { deleteDeck(deck.id); setConfirmDeleteId(null); }}
-                        className="text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer"
-                      >
-                        Delete
-                      </button>
-                      <button
-                        onClick={() => setConfirmDeleteId(null)}
-                        className="text-xs text-text-muted hover:text-text cursor-pointer ml-1"
-                      >
-                        Cancel
-                      </button>
+          {sorted.map((deck) => {
+            const isOwner = user && deck.user_id === user.id;
+            return (
+              <Link
+                key={deck.id}
+                to={`/decks/${deck.id}`}
+                className="relative rounded-xl overflow-hidden border border-border/50 hover:border-accent/30 group block transition-colors"
+              >
+                {deck.commander && (
+                  <img
+                    src={`https://api.scryfall.com/cards/named?format=image&exact=${encodeURIComponent(deck.commander)}&version=art_crop`}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover opacity-15 group-hover:opacity-25 transition-opacity"
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/80 to-transparent" />
+                <div className="relative p-5">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                      <ColorPips colors={deck.color_identity ?? []} />
+                      <h3 className="font-semibold truncate">
+                        {deck.deck_name || deck.commander || "Unnamed Deck"}
+                      </h3>
                     </div>
-                  ) : (
-                    <button
-                      onClick={(e) => { e.preventDefault(); setConfirmDeleteId(deck.id); }}
-                      className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-red-400 transition-all cursor-pointer shrink-0"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
+                    {isOwner && (
+                      confirmDeleteId === deck.id ? (
+                        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.preventDefault()}>
+                          <button
+                            onClick={() => { deleteDeck(deck.id); setConfirmDeleteId(null); }}
+                            className="text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="text-xs text-text-muted hover:text-text cursor-pointer ml-1"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={(e) => { e.preventDefault(); setConfirmDeleteId(deck.id); }}
+                          className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-red-400 transition-all cursor-pointer shrink-0"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )
+                    )}
+                  </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-                  <div title="Overall power score based on how strong your card pairs are together">
-                    <span className="text-text-muted">Power Rank</span>
-                    <p className="font-mono font-semibold text-accent">
-                      {deck.power_rank.toFixed(2)}
-                    </p>
+                  <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                    <div title="Overall power score based on how strong your card pairs are together">
+                      <span className="text-text-muted">Power Rank</span>
+                      <p className="font-mono font-semibold text-accent">
+                        {deck.power_rank.toFixed(2)}
+                      </p>
+                    </div>
+                    <div title="Total number of cards in this decklist">
+                      <span className="text-text-muted">Cards</span>
+                      <p className="font-mono font-semibold">{deck.cards.length}</p>
+                    </div>
+                    <div title="Number of card pairs in this deck that have known synergy data">
+                      <span className="text-text-muted">Pairs Found</span>
+                      <p className="font-mono">{deck.pairs_found.toLocaleString()}</p>
+                    </div>
+                    <div title="Number of card pairs with no synergy data — these couldn't be scored">
+                      <span className="text-text-muted">Missing</span>
+                      <p className="font-mono">{deck.pairs_missing.toLocaleString()}</p>
+                    </div>
                   </div>
-                  <div title="Total number of cards in this decklist">
-                    <span className="text-text-muted">Cards</span>
-                    <p className="font-mono font-semibold">{deck.cards.length}</p>
-                  </div>
-                  <div title="Number of card pairs in this deck that have known synergy data">
-                    <span className="text-text-muted">Pairs Found</span>
-                    <p className="font-mono">{deck.pairs_found.toLocaleString()}</p>
-                  </div>
-                  <div title="Number of card pairs with no synergy data — these couldn't be scored">
-                    <span className="text-text-muted">Missing</span>
-                    <p className="font-mono">{deck.pairs_missing.toLocaleString()}</p>
-                  </div>
-                </div>
 
-                <p className="text-xs text-text-muted/60">
-                  {formatTime(deck.updated_at)}
-                </p>
-              </div>
-            </Link>
-          ))}
+                  <p className="text-xs text-text-muted/60">
+                    {formatTime(deck.updated_at)}
+                  </p>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       )}
     </main>

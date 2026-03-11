@@ -26,7 +26,9 @@
       "Bash(cd \"C:\\\\Users\\\\Almin\\\\Documents\\\\Projects\\\\cedh-power-simple\" && mv src/pages src/views)",
       "Bash(cd \"C:\\\\Users\\\\Almin\\\\Documents\\\\Projects\\\\cedh-power-simple\" && rm -rf .next && npx next build 2>&1 | tail -30)",
       "Bash(ls -la \"C:\\\\Users\\\\Almin\\\\Documents\\\\Projects\\\\cedh-power-simple\"/.env*)",
-      "WebFetch(domain:cedhpower.com)"
+      "WebFetch(domain:cedhpower.com)",
+      "Bash(find \"C:\\\\Users\\\\Almin\\\\Documents\\\\Projects\\\\cedh-power-simple/src\" -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" -o -name \"*.jsx\" \\\\\\) 2>/dev/null | sort)",
+      "Bash(find \"C:\\\\Users\\\\Almin\\\\Documents\\\\Projects\\\\cedh-power-simple\" -name \"*.sql\" -o -name \"*migration*\" -o -name \"*schema*\" 2>/dev/null | grep -v node_modules | grep -v \".next\")"
     ]
   }
 }

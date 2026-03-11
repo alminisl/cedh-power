@@ -5,6 +5,7 @@ import path from "path";
 
 export const maxDuration = 300;
 
+
 function toNumber(val: unknown): number {
   if (typeof val === "bigint") return Number(val);
   if (typeof val === "number") return val;
