@@ -61,6 +61,7 @@ export default function AddDataPage({
   const [confirmClear, setConfirmClear] = useState(false);
   const [reanalyzing, setReanalyzing] = useState(false);
   const [reanalyzeResult, setReanalyzeResult] = useState("");
+  const [reanalyzeProgress, setReanalyzeProgress] = useState({ current: 0, total: 0 });
 
   const pairEntries = Object.entries(customPairs);
   const storageSize = formatBytes(
@@ -112,13 +113,17 @@ export default function AddDataPage({
     if (!pairData) return;
     setReanalyzing(true);
     setReanalyzeResult("");
+    setReanalyzeProgress({ current: 0, total: 0 });
     try {
       const { data: allDecks } = await supabase
         .from("decklists")
         .select("id, cards");
 
+      const total = allDecks?.length ?? 0;
+      setReanalyzeProgress({ current: 0, total });
+
       let count = 0;
-      if (allDecks && allDecks.length > 0) {
+      if (allDecks && total > 0) {
         for (const deck of allDecks) {
           const analysis = analyzeDeck(deck.cards, pairData);
           await supabase
@@ -133,6 +138,7 @@ export default function AddDataPage({
             })
             .eq("id", deck.id);
           count++;
+          setReanalyzeProgress({ current: count, total });
         }
       }
       setReanalyzeResult(`Re-analyzed ${count} deck${count !== 1 ? "s" : ""} successfully.`);
@@ -476,7 +482,9 @@ export default function AddDataPage({
                   {reanalyzing ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Re-analyzing...
+                      {reanalyzeProgress.total > 0
+                        ? `${reanalyzeProgress.current} / ${reanalyzeProgress.total} decks`
+                        : "Loading decks..."}
                     </>
                   ) : (
                     "Re-analyze All Decks"

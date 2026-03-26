@@ -15,9 +15,12 @@ export function parseDeckList(text: string): string[] {
     const qty = match ? parseInt(match[1], 10) : 1;
     const rawName = match ? match[2].trim() : line.trim();
 
+    // Strip Moxfield-style set code and collector number suffix: "Card Name (SET) 123" or "Card Name (SET) 123 *F*"
+    const stripped = rawName.replace(/\s*\([A-Za-z0-9]{2,6}\)\s*\d+.*$/, "").trim();
+
     // Normalize double-faced cards: keep only the front face name
     // e.g. "Birgi, God of Storytelling // Harnfel, Horn of Bounty" → "Birgi, God of Storytelling"
-    const name = rawName.includes(" // ") ? rawName.split(" // ")[0].trim() : rawName;
+    const name = stripped.includes(" // ") ? stripped.split(" // ")[0].trim() : stripped;
 
     if (name) {
       for (let i = 0; i < qty; i++) {
