@@ -30,7 +30,18 @@
       "Bash(find \"C:\\\\Users\\\\Almin\\\\Documents\\\\Projects\\\\cedh-power-simple/src\" -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" -o -name \"*.jsx\" \\\\\\) 2>/dev/null | sort)",
       "Bash(find \"C:\\\\Users\\\\Almin\\\\Documents\\\\Projects\\\\cedh-power-simple\" -name \"*.sql\" -o -name \"*migration*\" -o -name \"*schema*\" 2>/dev/null | grep -v node_modules | grep -v \".next\")",
       "Bash(find /c/Users/Almin/Documents/Projects/cedh-power-simple -type f -name \".env*\" 2>/dev/null | head -20)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(exit 0)",
+      "Bash(taskkill /F /PID 41360)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :3000)",
+      "Bash(taskkill /F /PID 41360 /T)",
+      "Bash(taskkill /F /PID 15588 /T)",
+      "Bash(cmd /c \"taskkill /F /PID 41360 /T & taskkill /F /PID 15588 /T\")",
+      "Bash(cmd /c \"taskkill /F /PID 41360\")",
+      "Bash(cmd /c \"taskkill /F /PID 15588\")",
+      "Bash(cmd /c \"taskkill /F /IM node.exe 2>nul & rmdir /S /Q C:\\\\Users\\\\Almin\\\\Documents\\\\Projects\\\\cedh-power-simple\\\\.next\")"
     ]
   }
 }

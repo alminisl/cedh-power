@@ -154,16 +154,25 @@ export default function DeckViewPage({ pairData }: DeckViewPageProps) {
 
   return (
     <div className="relative">
-      {deck.commander && (
-        <>
-          <img
-            src={`https://api.scryfall.com/cards/named?format=image&exact=${encodeURIComponent(deck.commander)}&version=art_crop`}
-            alt=""
-            className="absolute inset-x-0 top-0 w-full h-72 object-cover opacity-15"
-          />
-          <div className="absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-transparent via-bg/70 to-bg" />
-        </>
-      )}
+      {deck.commander && (() => {
+        const commanders = deck.commander.split(" / ").map((c) => c.trim()).filter(Boolean);
+        return (
+          <>
+            <div className="absolute inset-x-0 top-0 w-full h-72 flex">
+              {commanders.slice(0, 2).map((c, i) => (
+                <img
+                  key={i}
+                  src={`https://api.scryfall.com/cards/named?format=image&exact=${encodeURIComponent(c)}&version=art_crop`}
+                  alt=""
+                  className="h-full object-cover opacity-15"
+                  style={{ width: `${100 / commanders.length}%` }}
+                />
+              ))}
+            </div>
+            <div className="absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-transparent via-bg/70 to-bg" />
+          </>
+        );
+      })()}
       <main className="relative max-w-7xl mx-auto px-4 py-8 space-y-6">
         <Link
           to="/decks"

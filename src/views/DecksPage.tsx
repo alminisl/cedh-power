@@ -67,9 +67,6 @@ function formatTime(ts: string): string {
     month: "short",
     day: "numeric",
     year: "numeric",
-  }) + " " + d.toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
   });
 }
 
@@ -226,13 +223,30 @@ export default function DecksPage() {
                 to={`/decks/${deck.id}`}
                 className="relative rounded-xl overflow-hidden border border-border/50 hover:border-accent/30 group block transition-colors"
               >
-                {deck.commander && (
-                  <img
-                    src={`https://api.scryfall.com/cards/named?format=image&exact=${encodeURIComponent(deck.commander)}&version=art_crop`}
-                    alt=""
-                    className="absolute inset-0 w-full h-full object-cover opacity-15 group-hover:opacity-25 transition-opacity"
-                  />
-                )}
+                {deck.commander && (() => {
+                  const commanders = deck.commander.split(" / ").map((c) => c.trim()).filter(Boolean);
+                  if (commanders.length === 1) {
+                    return (
+                      <img
+                        src={`https://api.scryfall.com/cards/named?format=image&exact=${encodeURIComponent(commanders[0])}&version=art_crop`}
+                        alt=""
+                        className="absolute inset-0 w-full h-full object-cover opacity-15 group-hover:opacity-25 transition-opacity"
+                      />
+                    );
+                  }
+                  return (
+                    <div className="absolute inset-0 flex">
+                      {commanders.slice(0, 2).map((c, i) => (
+                        <img
+                          key={i}
+                          src={`https://api.scryfall.com/cards/named?format=image&exact=${encodeURIComponent(c)}&version=art_crop`}
+                          alt=""
+                          className="w-1/2 h-full object-cover opacity-15 group-hover:opacity-25 transition-opacity"
+                        />
+                      ))}
+                    </div>
+                  );
+                })()}
                 <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/80 to-transparent" />
                 <div className="relative p-5">
                   <div className="flex items-start justify-between mb-3">

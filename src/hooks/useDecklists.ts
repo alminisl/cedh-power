@@ -18,15 +18,21 @@ export interface Decklist {
   updated_at: string;
 }
 
+const colorIdentityCache = new Map<string, string[]>();
+
 async function fetchColorIdentity(commander: string): Promise<string[]> {
   if (!commander) return [];
+  if (colorIdentityCache.has(commander)) return colorIdentityCache.get(commander)!;
   try {
+    await new Promise((r) => setTimeout(r, 100));
     const res = await fetch(
       `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(commander)}`
     );
     if (!res.ok) return [];
     const data = await res.json();
-    return data.color_identity ?? [];
+    const identity = data.color_identity ?? [];
+    colorIdentityCache.set(commander, identity);
+    return identity;
   } catch {
     return [];
   }
