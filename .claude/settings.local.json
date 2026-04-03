@@ -41,7 +41,10 @@
       "Bash(cmd /c \"taskkill /F /PID 41360 /T & taskkill /F /PID 15588 /T\")",
       "Bash(cmd /c \"taskkill /F /PID 41360\")",
       "Bash(cmd /c \"taskkill /F /PID 15588\")",
-      "Bash(cmd /c \"taskkill /F /IM node.exe 2>nul & rmdir /S /Q C:\\\\Users\\\\Almin\\\\Documents\\\\Projects\\\\cedh-power-simple\\\\.next\")"
+      "Bash(cmd /c \"taskkill /F /IM node.exe 2>nul & rmdir /S /Q C:\\\\Users\\\\Almin\\\\Documents\\\\Projects\\\\cedh-power-simple\\\\.next\")",
+      "Bash(find /c/Users/Almin/Documents/Projects/cedh-power-simple/src -type f -name *.sql -o -name *schema* -o -name *migration*)",
+      "Bash(schema)",
+      "Bash(sql)"
     ]
   }
 }

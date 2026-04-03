@@ -1,5 +1,5 @@
 import { parquetRead } from "hyparquet";
-import type { PairData } from "../types";
+import type { PairData, ParquetVersion } from "../types";
 
 export interface UploadProgress {
   step: "parsing" | "uploading-json" | "done";
@@ -87,6 +87,25 @@ export async function uploadPairData(
   }
 
   onProgress?.({ step: "done", percent: 100, label: "Complete!" });
+
+  // Record upload in version history (non-critical)
+  const versionEntry: ParquetVersion = {
+    r2_key: "pairData.json",
+    size: file.size,
+    uploaded: new Date().toISOString(),
+    original_filename: file.name,
+    pair_count: pairCount,
+    card_count: cardCount,
+    uploaded_by: uploaderEmail ?? null,
+  };
+  fetch("/api/parquet-versions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${secret}`,
+    },
+    body: JSON.stringify(versionEntry),
+  }).catch(() => {});
 
   return { pairData, pairCount, cardCount };
 }

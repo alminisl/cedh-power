@@ -7,6 +7,37 @@ import ResultsDashboard from "../components/ResultsDashboard";
 import type { PairData, DeckAnalysis } from "../types";
 import type { Decklist } from "../hooks/useDecklists";
 
+interface Snapshot {
+  snapshot_date: string;
+  power_rank: number;
+}
+
+function Sparkline({ snapshots }: { snapshots: Snapshot[] }) {
+  if (snapshots.length < 2) return null;
+  const W = 100, H = 50, PAD = 4;
+  const values = snapshots.map((s) => s.power_rank);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 0.01;
+  const points = snapshots.map((s, i) => {
+    const x = PAD + (i / (snapshots.length - 1)) * (W - PAD * 2);
+    const y = H - PAD - ((s.power_rank - min) / range) * (H - PAD * 2);
+    return [x, y] as [number, number];
+  });
+  const polylinePoints = points.map(([x, y]) => `${x},${y}`).join(" ");
+  const last = values[values.length - 1];
+  const prev = values[values.length - 2];
+  const color = last > prev + 0.001 ? "#22c55e" : last < prev - 0.001 ? "#ef4444" : "#6b7280";
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-14" preserveAspectRatio="none">
+      <polyline points={polylinePoints} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      {points.map(([x, y], i) => (
+        <circle key={i} cx={x} cy={y} r="2.5" fill={color} />
+      ))}
+    </svg>
+  );
+}
+
 const TYPE_CATEGORIES = [
   "Commander",
   "Creature",
@@ -77,6 +108,7 @@ export default function DeckViewPage({ pairData }: DeckViewPageProps) {
   const [copied, setCopied] = useState(false);
   const [cardTypes, setCardTypes] = useState<Map<string, CardTypeInfo>>(new Map());
   const [typesLoading, setTypesLoading] = useState(false);
+  const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
 
   const loadCardTypes = useCallback(async (cards: string[]) => {
     setTypesLoading(true);
@@ -103,6 +135,16 @@ export default function DeckViewPage({ pairData }: DeckViewPageProps) {
   useEffect(() => {
     if (deck?.cards.length) loadCardTypes(deck.cards);
   }, [deck, loadCardTypes]);
+
+  useEffect(() => {
+    if (!id) return;
+    supabase
+      .from("deck_snapshots")
+      .select("snapshot_date, power_rank")
+      .eq("deck_id", id)
+      .order("snapshot_date", { ascending: true })
+      .then(({ data }) => { if (data) setSnapshots(data); });
+  }, [id]);
 
   const groupedCards = useMemo(() => {
     if (!deck || cardTypes.size === 0) return null;
@@ -211,6 +253,29 @@ export default function DeckViewPage({ pairData }: DeckViewPageProps) {
           </button>
         </div>
         {analysis && <ResultsDashboard results={analysis} />}
+
+        {snapshots.length >= 2 && (() => {
+          const first = snapshots[0];
+          const last = snapshots[snapshots.length - 1];
+          const delta = last.power_rank - first.power_rank;
+          const sign = delta > 0 ? "+" : "";
+          const trendColor = delta > 0.001 ? "text-green-400" : delta < -0.001 ? "text-red-400" : "text-text-muted";
+          return (
+            <div className="glass rounded-xl p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold">Power Rank History</h2>
+                <span className={`text-sm font-mono font-semibold ${trendColor}`}>
+                  {sign}{delta.toFixed(2)} all time
+                </span>
+              </div>
+              <Sparkline snapshots={snapshots} />
+              <div className="flex justify-between mt-2 text-xs text-text-muted">
+                <span>{first.snapshot_date}</span>
+                <span>{last.snapshot_date}</span>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Card List by Type */}
         {typesLoading ? (

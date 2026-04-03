@@ -1,10 +1,10 @@
-import { useState, useRef, useMemo, type FormEvent } from "react";
-import { Plus, Upload, Trash2, FileText, Code, Database, Loader2, CheckCircle, BarChart3 } from "lucide-react";
+import { useState, useRef, useMemo, useEffect, type FormEvent } from "react";
+import { Plus, Upload, Trash2, FileText, Code, Database, Loader2, CheckCircle, BarChart3, History } from "lucide-react";
 import { uploadPairData, type UploadProgress } from "../lib/uploadPairData";
 import { analyzeDeck } from "../lib/deckAnalyzer";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
-import type { PairData, PairStats } from "../types";
+import type { PairData, PairStats, ParquetVersion } from "../types";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return bytes + " B";
@@ -41,6 +41,10 @@ export default function AddDataPage({
   const [parquetFileName, setParquetFileName] = useState("");
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const parquetRef = useRef<HTMLInputElement>(null);
+
+  // Upload history state
+  const [uploadHistory, setUploadHistory] = useState<ParquetVersion[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Manual entry state
   const [cardA, setCardA] = useState("");
@@ -109,6 +113,25 @@ export default function AddDataPage({
     };
   }, [pairData]);
 
+  async function fetchUploadHistory() {
+    setHistoryLoading(true);
+    try {
+      const res = await fetch("/api/parquet-versions");
+      if (res.ok) {
+        const data = await res.json();
+        setUploadHistory(data);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (tab === "parquet") fetchUploadHistory();
+  }, [tab]);
+
   async function handleReanalyze() {
     if (!pairData) return;
     setReanalyzing(true);
@@ -117,15 +140,43 @@ export default function AddDataPage({
     try {
       const { data: allDecks } = await supabase
         .from("decklists")
-        .select("id, cards");
+        .select("id, cards, power_rank, commander");
 
       const total = allDecks?.length ?? 0;
       setReanalyzeProgress({ current: 0, total });
 
       let count = 0;
+      let improved = 0, dropped = 0, unchanged = 0;
+      let topMover: { name: string; delta: number } | null = null;
+      const snapshots: {
+        deck_id: string; snapshot_date: string;
+        power_rank: number; average_pair_power: number;
+        pairs_found: number; pairs_missing: number;
+      }[] = [];
+      const today = new Date().toISOString().split("T")[0];
+
       if (allDecks && total > 0) {
         for (const deck of allDecks) {
           const analysis = analyzeDeck(deck.cards, pairData);
+          const delta = analysis.totalPowerRank - (deck.power_rank ?? 0);
+
+          if (delta > 0.001) improved++;
+          else if (delta < -0.001) dropped++;
+          else unchanged++;
+
+          if (!topMover || Math.abs(delta) > Math.abs(topMover.delta)) {
+            topMover = { name: deck.commander ?? deck.id, delta };
+          }
+
+          snapshots.push({
+            deck_id: deck.id,
+            snapshot_date: today,
+            power_rank: analysis.totalPowerRank,
+            average_pair_power: analysis.averagePairPower,
+            pairs_found: analysis.pairsFound,
+            pairs_missing: analysis.pairsMissing,
+          });
+
           await supabase
             .from("decklists")
             .update({
@@ -140,8 +191,19 @@ export default function AddDataPage({
           count++;
           setReanalyzeProgress({ current: count, total });
         }
+
+        if (snapshots.length > 0) {
+          await supabase.from("deck_snapshots").insert(snapshots);
+        }
       }
-      setReanalyzeResult(`Re-analyzed ${count} deck${count !== 1 ? "s" : ""} successfully.`);
+
+      const sign = topMover && topMover.delta > 0 ? "+" : "";
+      const topMoverStr = topMover
+        ? `. Biggest mover: ${topMover.name} ${sign}${topMover.delta.toFixed(2)}`
+        : "";
+      setReanalyzeResult(
+        `Re-analyzed ${count} deck${count !== 1 ? "s" : ""} — ↑ ${improved} improved, ↓ ${dropped} dropped, → ${unchanged} unchanged${topMoverStr}.`
+      );
     } catch (err) {
       setReanalyzeResult(`Error: ${(err as Error).message}`);
     } finally {
@@ -174,12 +236,40 @@ export default function AddDataPage({
 
       const { data: allDecks } = await supabase
         .from("decklists")
-        .select("id, cards");
+        .select("id, cards, power_rank, commander");
 
       let reanalyzed = 0;
+      let improved = 0, dropped = 0, unchanged = 0;
+      let topMover: { name: string; delta: number } | null = null;
+      const snapshots: {
+        deck_id: string; snapshot_date: string;
+        power_rank: number; average_pair_power: number;
+        pairs_found: number; pairs_missing: number;
+      }[] = [];
+      const today = new Date().toISOString().split("T")[0];
+
       if (allDecks && allDecks.length > 0) {
         for (const deck of allDecks) {
           const analysis = analyzeDeck(deck.cards, newPairData);
+          const delta = analysis.totalPowerRank - (deck.power_rank ?? 0);
+
+          if (delta > 0.001) improved++;
+          else if (delta < -0.001) dropped++;
+          else unchanged++;
+
+          if (!topMover || Math.abs(delta) > Math.abs(topMover.delta)) {
+            topMover = { name: deck.commander ?? deck.id, delta };
+          }
+
+          snapshots.push({
+            deck_id: deck.id,
+            snapshot_date: today,
+            power_rank: analysis.totalPowerRank,
+            average_pair_power: analysis.averagePairPower,
+            pairs_found: analysis.pairsFound,
+            pairs_missing: analysis.pairsMissing,
+          });
+
           await supabase
             .from("decklists")
             .update({
@@ -193,11 +283,20 @@ export default function AddDataPage({
             .eq("id", deck.id);
           reanalyzed++;
         }
+
+        if (snapshots.length > 0) {
+          await supabase.from("deck_snapshots").insert(snapshots);
+        }
       }
 
+      const sign = topMover && topMover.delta > 0 ? "+" : "";
+      const topMoverStr = topMover
+        ? ` Biggest mover: ${topMover.name} ${sign}${topMover.delta.toFixed(2)}.`
+        : "";
       setParquetSuccess(
-        `Replaced pair data: ${pairCount.toLocaleString()} pairs across ${cardCount.toLocaleString()} cards. Re-analyzed ${reanalyzed} deck${reanalyzed !== 1 ? "s" : ""}.`
+        `Replaced pair data: ${pairCount.toLocaleString()} pairs across ${cardCount.toLocaleString()} cards. Re-analyzed ${reanalyzed} deck${reanalyzed !== 1 ? "s" : ""} — ↑ ${improved} improved, ↓ ${dropped} dropped, → ${unchanged} unchanged.${topMoverStr}`
       );
+      fetchUploadHistory();
     } catch (err) {
       setParquetError((err as Error).message);
     } finally {
@@ -412,6 +511,66 @@ export default function AddDataPage({
               {parquetSuccess}
             </p>
           )}
+
+          {/* Upload History */}
+          <div className="pt-4 border-t border-border/50">
+            <div className="flex items-center gap-2 mb-3">
+              <History className="w-4 h-4 text-text-muted" />
+              <h3 className="text-sm font-semibold">Upload History</h3>
+            </div>
+            {historyLoading ? (
+              <div className="flex items-center gap-2 text-sm text-text-muted py-4">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading history...
+              </div>
+            ) : uploadHistory.length === 0 ? (
+              <p className="text-sm text-text-muted py-2">No uploads recorded yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="py-2 text-left text-text-muted font-medium">File</th>
+                      <th className="py-2 text-left text-text-muted font-medium">Date</th>
+                      <th className="py-2 text-left text-text-muted font-medium">Pairs</th>
+                      <th className="py-2 text-left text-text-muted font-medium">Cards</th>
+                      <th className="py-2 text-left text-text-muted font-medium">Size</th>
+                      <th className="py-2 text-left text-text-muted font-medium">By</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {uploadHistory.map((v, i) => (
+                      <tr
+                        key={i}
+                        className={`border-b border-border/50 transition-colors ${
+                          i === 0 ? "bg-accent/5" : "hover:bg-surface-light/50"
+                        }`}
+                      >
+                        <td className="py-2 font-mono text-xs text-text-muted max-w-[160px] truncate">
+                          {v.original_filename ?? v.r2_key}
+                          {i === 0 && (
+                            <span className="ml-2 text-accent text-[10px] font-semibold uppercase tracking-wide">current</span>
+                          )}
+                        </td>
+                        <td className="py-2 text-xs whitespace-nowrap">
+                          {new Date(v.uploaded).toLocaleString(undefined, {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}
+                        </td>
+                        <td className="py-2 font-mono">{v.pair_count.toLocaleString()}</td>
+                        <td className="py-2 font-mono">{v.card_count.toLocaleString()}</td>
+                        <td className="py-2 font-mono text-xs">{formatBytes(v.size)}</td>
+                        <td className="py-2 text-xs text-text-muted truncate max-w-[120px]">
+                          {v.uploaded_by ?? "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
