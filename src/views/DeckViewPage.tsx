@@ -4,7 +4,7 @@ import { Swords, ArrowLeft, Loader2, Share2, CheckCircle } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { analyzeDeck } from "../lib/deckAnalyzer";
 import ResultsDashboard from "../components/ResultsDashboard";
-import type { PairData, DeckAnalysis } from "../types";
+import type { PairData, DeckAnalysis, ScryfallCardData } from "../types";
 import type { Decklist } from "../hooks/useDecklists";
 
 interface Snapshot {
@@ -51,7 +51,7 @@ const TYPE_CATEGORIES = [
   "Other",
 ] as const;
 
-type CardTypeInfo = { name: string; type_line: string; mana_cost?: string };
+type CardTypeInfo = ScryfallCardData;
 
 function categorizeCard(typeLine: string, isCommander: boolean): string {
   if (isCommander) return "Commander";
@@ -84,8 +84,19 @@ async function fetchCardTypes(cardNames: string[]): Promise<Map<string, CardType
         for (const card of data.data ?? []) {
           result.set(card.name, {
             name: card.name,
-            type_line: card.type_line ?? "",
             mana_cost: card.mana_cost ?? "",
+            type_line: card.type_line ?? "",
+            oracle_text: card.oracle_text,
+            power: card.power,
+            toughness: card.toughness,
+            loyalty: card.loyalty,
+            image_uris: card.image_uris,
+            card_faces: card.card_faces,
+            set_name: card.set_name ?? "",
+            set: card.set ?? "",
+            collector_number: card.collector_number ?? "",
+            rarity: card.rarity ?? "",
+            prices: card.prices ?? {},
           });
         }
       }
@@ -109,7 +120,6 @@ export default function DeckViewPage({ pairData }: DeckViewPageProps) {
   const [cardTypes, setCardTypes] = useState<Map<string, CardTypeInfo>>(new Map());
   const [typesLoading, setTypesLoading] = useState(false);
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
-
   const loadCardTypes = useCallback(async (cards: string[]) => {
     setTypesLoading(true);
     const types = await fetchCardTypes(cards);
@@ -252,7 +262,14 @@ export default function DeckViewPage({ pairData }: DeckViewPageProps) {
             )}
           </button>
         </div>
-        {analysis && <ResultsDashboard results={analysis} />}
+        {analysis && (
+          <ResultsDashboard
+            results={analysis}
+            groupedCards={groupedCards}
+            typesLoading={typesLoading}
+            cardDataMap={cardTypes}
+          />
+        )}
 
         {snapshots.length >= 2 && (() => {
           const first = snapshots[0];
@@ -277,32 +294,6 @@ export default function DeckViewPage({ pairData }: DeckViewPageProps) {
           );
         })()}
 
-        {/* Card List by Type */}
-        {typesLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-5 h-5 text-accent animate-spin" />
-          </div>
-        ) : groupedCards && (
-          <div className="glass rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">Decklist</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {TYPE_CATEGORIES.filter((cat) => groupedCards[cat].length > 0).map((cat) => (
-                <div key={cat}>
-                  <h3 className="text-sm font-semibold text-accent mb-2">
-                    {cat} ({groupedCards[cat].length})
-                  </h3>
-                  <ul className="space-y-0.5">
-                    {groupedCards[cat].map((name) => (
-                      <li key={name} className="text-sm text-text truncate">
-                        {name}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </main>
     </div>
   );

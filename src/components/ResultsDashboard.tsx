@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Save, CheckCircle, X } from "lucide-react";
-import type { DeckAnalysis, PairData } from "../types";
+import type { DeckAnalysis, PairData, ScryfallCardData } from "../types";
 import PowerRankHero from "./PowerRankHero";
 import StatsGrid from "./StatsGrid";
 import CardBreakdownTable from "./CardBreakdownTable";
@@ -13,9 +13,12 @@ interface ResultsDashboardProps {
   commander?: string;
   onSave?: (deckName: string) => Promise<void>;
   onSwap?: (oldCard: string, newCard: string) => void;
+  groupedCards?: Record<string, string[]> | null;
+  typesLoading?: boolean;
+  cardDataMap?: Map<string, ScryfallCardData>;
 }
 
-export default function ResultsDashboard({ results, pairData, cards, commander, onSave, onSwap }: ResultsDashboardProps) {
+export default function ResultsDashboard({ results, pairData, cards, commander, onSave, onSwap, groupedCards, typesLoading, cardDataMap }: ResultsDashboardProps) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showNameInput, setShowNameInput] = useState(false);
@@ -112,6 +115,9 @@ export default function ResultsDashboard({ results, pairData, cards, commander, 
         breakdown={results.cardBreakdown}
         selectedCard={selectedCard}
         onSelectCard={pairData ? setSelectedCard : undefined}
+        groupedCards={groupedCards}
+        typesLoading={typesLoading}
+        cardDataMap={cardDataMap}
       />
     </div>
   );

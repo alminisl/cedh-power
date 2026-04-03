@@ -1,3 +1,28 @@
+export interface ScryfallCardData {
+  name: string;
+  mana_cost?: string;
+  type_line: string;
+  oracle_text?: string;
+  power?: string;
+  toughness?: string;
+  loyalty?: string;
+  image_uris?: { normal: string };
+  card_faces?: Array<{
+    name?: string;
+    mana_cost?: string;
+    type_line?: string;
+    oracle_text?: string;
+    power?: string;
+    toughness?: string;
+    image_uris?: { normal: string };
+  }>;
+  set_name: string;
+  set: string;
+  collector_number: string;
+  rarity: string;
+  prices: { usd?: string; usd_foil?: string };
+}
+
 export interface PairStats {
   p: number;
   w?: number;
