@@ -24,13 +24,14 @@ async function fetchColorIdentity(commander: string): Promise<string[]> {
   if (!commander) return [];
   if (colorIdentityCache.has(commander)) return colorIdentityCache.get(commander)!;
   try {
-    await new Promise((r) => setTimeout(r, 100));
-    const res = await fetch(
-      `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(commander)}`
-    );
+    const res = await fetch("/api/scryfall/collection", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identifiers: [{ name: commander }] }),
+    });
     if (!res.ok) return [];
     const data = await res.json();
-    const identity = data.color_identity ?? [];
+    const identity = data.data?.[0]?.color_identity ?? [];
     colorIdentityCache.set(commander, identity);
     return identity;
   } catch {

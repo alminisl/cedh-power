@@ -27,10 +27,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ data: cached, not_found: [] });
     }
 
-    const res = await fetch("https://api.scryfall.com/cards/collection", {
+    const res = await fetch("https://brackend.brackcheck.com/api/cards/bulk-by-names", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ identifiers: toFetch }),
+      body: JSON.stringify({ names: toFetch.map((i) => i.name) }),
     });
 
     if (!res.ok) {
@@ -43,14 +43,21 @@ export async function POST(req: NextRequest) {
 
     const data = await res.json();
 
-    // Store freshly fetched cards in server cache
-    for (const card of data.data ?? []) {
-      serverCache.set(card.name, { data: card, ts: now });
+    // Deduplicate by name (bulk-by-names returns multiple printings per name),
+    // then normalize set_code → set to match ScryfallCardData shape
+    const seen = new Set<string>();
+    const fresh: unknown[] = [];
+    for (const card of data.cards ?? []) {
+      if (seen.has(card.name)) continue;
+      seen.add(card.name);
+      const normalized = { ...card, set: card.set_code ?? card.set };
+      serverCache.set(card.name, { data: normalized, ts: now });
+      fresh.push(normalized);
     }
 
     return NextResponse.json({
-      data: [...cached, ...(data.data ?? [])],
-      not_found: data.not_found ?? [],
+      data: [...cached, ...fresh],
+      not_found: [],
     });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

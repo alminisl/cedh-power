@@ -21,11 +21,16 @@ export default function CardModal({ cardName, breakdown, onClose, prefetchedData
     setLoading(true);
     setError(false);
     setCard(null);
-    fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(cardName)}`)
+    fetch("/api/scryfall/collection", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identifiers: [{ name: cardName }] }),
+    })
       .then((r) => r.json())
       .then((data) => {
-        if (data.object === "error") setError(true);
-        else setCard(data);
+        const card = data.data?.[0] ?? null;
+        if (!card) setError(true);
+        else setCard(card);
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
