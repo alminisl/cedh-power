@@ -20,7 +20,12 @@ export function parseDeckList(text: string): string[] {
 
     // Normalize double-faced cards: keep only the front face name
     // e.g. "Birgi, God of Storytelling // Harnfel, Horn of Bounty" → "Birgi, God of Storytelling"
-    const name = stripped.includes(" // ") ? stripped.split(" // ")[0].trim() : stripped;
+    // also handles single-slash format: "Aclazotz, Deepest Betrayal / Temple of the Dead" → "Aclazotz, Deepest Betrayal"
+    const name = stripped.includes(" // ")
+      ? stripped.split(" // ")[0].trim()
+      : stripped.includes(" / ")
+      ? stripped.split(" / ")[0].trim()
+      : stripped;
 
     if (name) {
       for (let i = 0; i < qty; i++) {
