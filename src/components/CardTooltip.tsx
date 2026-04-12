@@ -4,8 +4,8 @@ import { Loader2 } from "lucide-react";
 
 const imageCache = new Set<string>();
 
-function getScryfallUrl(cardName: string): string {
-  return `https://api.scryfall.com/cards/named?format=image&exact=${encodeURIComponent(cardName)}&version=normal`;
+function getCardImageUrl(cardName: string): string {
+  return `/api/card-image?name=${encodeURIComponent(cardName)}&version=normal`;
 }
 
 interface CardTooltipProps {
@@ -90,7 +90,7 @@ export default function CardTooltip({ cardName, children }: CardTooltipProps) {
               </div>
             )}
             <img
-              src={getScryfallUrl(cardName)}
+              src={getCardImageUrl(cardName)}
               alt={cardName}
               width={250}
               className={`rounded-md ${loaded ? "block" : "hidden"}`}
