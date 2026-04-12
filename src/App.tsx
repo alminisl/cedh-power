@@ -19,6 +19,7 @@ import { useDecklists } from "./hooks/useDecklists";
 import { useAuth } from "./context/AuthContext";
 import { analyzeDeck } from "./lib/deckAnalyzer";
 import { mergePairData } from "./lib/mergePairData";
+import { useCardTypes } from "./hooks/useCardTypes";
 import type { DeckAnalysis, HistoryEntry } from "./types";
 import type { Decklist } from "./hooks/useDecklists";
 
@@ -39,6 +40,8 @@ export default function App() {
     useCustomPairs();
   const { decklists, loading: decksLoading, saveDeck, deleteDeck } =
     useDecklists(user?.id);
+
+  const { cardTypes, typesLoading, groupedCards } = useCardTypes(currentCards, currentCommander);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const toggleSidebar = useCallback(() => setSidebarOpen((v) => !v), []);
@@ -141,6 +144,9 @@ export default function App() {
                             commander={currentCommander}
                             onSave={user ? handleSaveDeck : undefined}
                             onSwap={handleSwap}
+                            groupedCards={groupedCards}
+                            typesLoading={typesLoading}
+                            cardDataMap={cardTypes}
                           />
                         </div>
                       )}

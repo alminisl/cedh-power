@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Search, ArrowUpDown, LayoutList, List, Grid2X2, Loader2 } from "lucide-react";
+import { Search, ArrowUpDown, LayoutList, List, Loader2 } from "lucide-react";
 import type { CardBreakdownItem, ScryfallCardData } from "../types";
 import CardTooltip from "./CardTooltip";
 import CardModal from "./CardModal";
@@ -31,7 +31,7 @@ function getCardImageUrl(cardName: string, cardData?: ScryfallCardData): string 
 }
 
 type SortKey = keyof CardBreakdownItem;
-type ViewMode = "table" | "list" | "cards";
+type ViewMode = "table" | "list";
 
 interface CardBreakdownTableProps {
   breakdown: CardBreakdownItem[];
@@ -185,15 +185,6 @@ export default function CardBreakdownTable({ breakdown, selectedCard, onSelectCa
             <List className="w-3.5 h-3.5" />
             List
           </button>
-          <button
-            onClick={() => setViewMode("cards")}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
-              viewMode === "cards" ? "bg-accent text-white" : "text-text-muted hover:text-text"
-            }`}
-          >
-            <Grid2X2 className="w-3.5 h-3.5" />
-            Cards
-          </button>
         </div>
       </div>
 
@@ -286,109 +277,73 @@ export default function CardBreakdownTable({ breakdown, selectedCard, onSelectCa
       ) : groupedCards ? (
 
         /* ── List view (Moxfield style) ── */
-        viewMode === "list" ? (
-          <>
-            {/* Mobile: single column */}
-            <div className="flex flex-col gap-5 md:hidden">
-              {activeGroups.map((g) => renderListSection(g.key, g.label, g.cards))}
-            </div>
-
-            {/* Desktop: sticky left image panel + 3 balanced columns */}
-            <div className="hidden md:flex gap-6 items-start">
-              {/* Left panel — sticky so it stays visible while scrolling the list */}
-              <div className="flex-shrink-0 w-52 sticky top-20 flex flex-col gap-3">
-                {previewCardName && (
-                  <>
-                    <div
-                      className="rounded-lg overflow-hidden shadow-lg cursor-pointer hover:shadow-accent/20 hover:shadow-xl transition-all duration-150"
-                      onClick={() => previewCardName && setModalCard(previewCardName)}
-                    >
-                      <img
-                        src={getCardImageUrl(previewCardName, previewCardData)}
-                        alt={previewCardName}
-                        className="w-full h-auto block"
-                        loading="eager"
-                      />
-                    </div>
-
-                    {previewCardData?.type_line && (
-                      <p className="text-xs font-medium text-text-muted px-1">
-                        {previewCardData.type_line}
-                      </p>
-                    )}
-
-                    {previewCardData?.oracle_text && (
-                      <p className="text-xs leading-relaxed text-text px-1 whitespace-pre-wrap line-clamp-6">
-                        {previewCardData.oracle_text}
-                      </p>
-                    )}
-
-                    {(previewCardData?.prices?.usd || previewCardData?.prices?.usd_foil) && (
-                      <div className="flex items-center gap-2 px-1 text-xs font-medium text-text-muted">
-                        {previewCardData.prices.usd && (
-                          <span className="text-text">${previewCardData.prices.usd}</span>
-                        )}
-                        {previewCardData.prices.usd && previewCardData.prices.usd_foil && (
-                          <span>/</span>
-                        )}
-                        {previewCardData.prices.usd_foil && (
-                          <span className="text-accent">
-                            ${previewCardData.prices.usd_foil} <span className="opacity-60">foil</span>
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* 3 balanced columns */}
-              <div className="flex-1 flex gap-6" style={{ alignItems: "flex-start" }}>
-                {col1.length > 0 && renderListColumn(col1)}
-                {col2.length > 0 && renderListColumn(col2)}
-                {col3.length > 0 && renderListColumn(col3)}
-              </div>
-            </div>
-          </>
-        ) : (
-
-          /* ── Cards view (image grid) ── */
-          <div className="space-y-6">
-            {activeGroups.map((group) => (
-              <div key={group.key}>
-                <h3 className="text-xs font-bold uppercase tracking-wide text-text-muted mb-2 pb-1 border-b border-white/10">
-                  {group.label} <span className="font-normal">({group.cards.length})</span>
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                  {group.cards.map((name) => {
-                    const data = cardDataMap?.get(name);
-                    const imgUrl = getCardImageUrl(name, data);
-                    return (
-                      <div
-                        key={name}
-                        className="relative group cursor-pointer transition-all duration-200 hover:scale-105 hover:-translate-y-1"
-                        onClick={() => setModalCard(name)}
-                      >
-                        <div className="relative aspect-[745/1040] rounded-lg overflow-hidden shadow-md group-hover:shadow-xl group-hover:shadow-accent/10 transition-shadow duration-200">
-                          <img
-                            src={imgUrl}
-                            alt={name}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                          {/* Hover overlay */}
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200" />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+        <>
+          {/* Mobile: single column */}
+          <div className="flex flex-col gap-5 md:hidden">
+            {activeGroups.map((g) => renderListSection(g.key, g.label, g.cards))}
           </div>
-        )
+
+          {/* Desktop: sticky left image panel + 3 balanced columns */}
+          <div className="hidden md:flex gap-6 items-start">
+            {/* Left panel — sticky so it stays visible while scrolling the list */}
+            <div className="flex-shrink-0 w-52 sticky top-20 flex flex-col gap-3">
+              {previewCardName && (
+                <>
+                  <div
+                    className="rounded-lg overflow-hidden shadow-lg cursor-pointer hover:shadow-accent/20 hover:shadow-xl transition-all duration-150"
+                    onClick={() => previewCardName && setModalCard(previewCardName)}
+                  >
+                    <img
+                      src={getCardImageUrl(previewCardName, previewCardData)}
+                      alt={previewCardName}
+                      className="w-full h-auto block"
+                      loading="eager"
+                    />
+                  </div>
+
+                  {previewCardData?.type_line && (
+                    <p className="text-xs font-medium text-text-muted px-1">
+                      {previewCardData.type_line}
+                    </p>
+                  )}
+
+                  {previewCardData?.oracle_text && (
+                    <p className="text-xs leading-relaxed text-text px-1 whitespace-pre-wrap line-clamp-6">
+                      {previewCardData.oracle_text}
+                    </p>
+                  )}
+
+                  {(previewCardData?.prices?.usd || previewCardData?.prices?.usd_foil) && (
+                    <div className="flex items-center gap-2 px-1 text-xs font-medium text-text-muted">
+                      {previewCardData.prices.usd && (
+                        <span className="text-text">${previewCardData.prices.usd}</span>
+                      )}
+                      {previewCardData.prices.usd && previewCardData.prices.usd_foil && (
+                        <span>/</span>
+                      )}
+                      {previewCardData.prices.usd_foil && (
+                        <span className="text-accent">
+                          ${previewCardData.prices.usd_foil} <span className="opacity-60">foil</span>
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* 3 balanced columns */}
+            <div className="flex-1 flex gap-6" style={{ alignItems: "flex-start" }}>
+              {col1.length > 0 && renderListColumn(col1)}
+              {col2.length > 0 && renderListColumn(col2)}
+              {col3.length > 0 && renderListColumn(col3)}
+            </div>
+          </div>
+        </>
       ) : (
-        <p className="text-sm text-text-muted text-center py-8">Card type data unavailable</p>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-5 h-5 text-accent animate-spin" />
+        </div>
       )}
 
       {modalCard && (
