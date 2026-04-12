@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Swords, ArrowLeft, Loader2, Share2, CheckCircle } from "lucide-react";
 import { supabase } from "../lib/supabase";
@@ -67,14 +67,54 @@ function categorizeCard(typeLine: string, isCommander: boolean): string {
   return "Other";
 }
 
+const SCRYFALL_CACHE_KEY = "scryfall_card_cache_v1";
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+function loadCache(): Record<string, { data: CardTypeInfo; ts: number }> {
+  try {
+    return JSON.parse(localStorage.getItem(SCRYFALL_CACHE_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveCache(cache: Record<string, { data: CardTypeInfo; ts: number }>) {
+  try {
+    localStorage.setItem(SCRYFALL_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // storage quota exceeded — skip silently
+  }
+}
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
 async function fetchCardTypes(cardNames: string[]): Promise<Map<string, CardTypeInfo>> {
   const result = new Map<string, CardTypeInfo>();
-  // Scryfall collection endpoint accepts max 75 cards per request
-  for (let i = 0; i < cardNames.length; i += 75) {
-    const batch = cardNames.slice(i, i + 75);
+  const now = Date.now();
+  const cache = loadCache();
+
+  // Serve cached entries and collect names that need fetching
+  const toFetch: string[] = [];
+  for (const name of cardNames) {
+    const entry = cache[name];
+    if (entry && now - entry.ts < CACHE_TTL_MS) {
+      result.set(name, entry.data);
+    } else {
+      toFetch.push(name);
+    }
+  }
+
+  if (toFetch.length === 0) return result;
+
+  // Scryfall collection endpoint: max 75 per request, ~100ms between batches
+  for (let i = 0; i < toFetch.length; i += 75) {
+    if (i > 0) await sleep(100);
+    const batch = toFetch.slice(i, i + 75);
     const identifiers = batch.map((name) => ({ name }));
     try {
-      const res = await fetch("https://api.scryfall.com/cards/collection", {
+      const res = await fetch("/api/scryfall/collection", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifiers }),
@@ -82,7 +122,7 @@ async function fetchCardTypes(cardNames: string[]): Promise<Map<string, CardType
       if (res.ok) {
         const data = await res.json();
         for (const card of data.data ?? []) {
-          result.set(card.name, {
+          const info: CardTypeInfo = {
             name: card.name,
             mana_cost: card.mana_cost ?? "",
             type_line: card.type_line ?? "",
@@ -97,13 +137,20 @@ async function fetchCardTypes(cardNames: string[]): Promise<Map<string, CardType
             collector_number: card.collector_number ?? "",
             rarity: card.rarity ?? "",
             prices: card.prices ?? {},
-          });
+          };
+          result.set(card.name, info);
+          cache[card.name] = { data: info, ts: now };
         }
+      } else if (res.status === 429) {
+        // Rate-limited — stop fetching, return what we have so far
+        break;
       }
     } catch {
-      // ignore fetch errors
+      // ignore network errors — cached data already in result
     }
   }
+
+  saveCache(cache);
   return result;
 }
 
@@ -120,11 +167,16 @@ export default function DeckViewPage({ pairData }: DeckViewPageProps) {
   const [cardTypes, setCardTypes] = useState<Map<string, CardTypeInfo>>(new Map());
   const [typesLoading, setTypesLoading] = useState(false);
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
-  const loadCardTypes = useCallback(async (cards: string[]) => {
+  // Guard against concurrent calls (React StrictMode double-invocation in dev)
+  const loadingDeckId = useRef<string | null>(null);
+  const loadCardTypes = useCallback(async (deckId: string, cards: string[]) => {
+    if (loadingDeckId.current === deckId) return; // already in flight for this deck
+    loadingDeckId.current = deckId;
     setTypesLoading(true);
     const types = await fetchCardTypes(cards);
     setCardTypes(types);
     setTypesLoading(false);
+    loadingDeckId.current = null;
   }, []);
 
   useEffect(() => {
@@ -143,7 +195,7 @@ export default function DeckViewPage({ pairData }: DeckViewPageProps) {
   }, [id]);
 
   useEffect(() => {
-    if (deck?.cards.length) loadCardTypes(deck.cards);
+    if (deck?.id && deck.cards.length) loadCardTypes(deck.id, deck.cards);
   }, [deck, loadCardTypes]);
 
   useEffect(() => {
@@ -161,9 +213,13 @@ export default function DeckViewPage({ pairData }: DeckViewPageProps) {
     const groups: Record<string, string[]> = {};
     for (const cat of TYPE_CATEGORIES) groups[cat] = [];
 
+    const commanderNames = new Set(
+      (deck.commander ?? "").split(" / ").map((c) => c.trim()).filter(Boolean)
+    );
+
     for (const cardName of deck.cards) {
       const info = cardTypes.get(cardName);
-      const isCommander = deck.commander === cardName;
+      const isCommander = commanderNames.has(cardName);
       const category = info ? categorizeCard(info.type_line, isCommander) : isCommander ? "Commander" : "Other";
       groups[category].push(cardName);
     }
