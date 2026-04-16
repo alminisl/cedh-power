@@ -129,7 +129,8 @@ export function useCardTypes(
   const loadingKey = useRef<string | null>(null);
 
   const load = useCallback(async (cardList: string[]) => {
-    const key = cardList.join(",");
+    // Dedup and sort so swapping cards (same set, different order) doesn't re-fetch.
+    const key = [...new Set(cardList)].sort().join(",");
     if (loadingKey.current === key) return;
     loadingKey.current = key;
     setTypesLoading(true);

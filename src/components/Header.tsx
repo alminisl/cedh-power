@@ -15,6 +15,7 @@ export default function Header({ customPairCount = 0, isAdmin = false, onToggleS
   const navLinks = [
     { to: "/", label: "Analyzer" },
     { to: "/decks", label: "Decks" },
+    { to: "/compare", label: "Compare" },
     { to: "/leaderboard", label: "Leaderboard" },
     ...(isAdmin ? [{ to: "/add", label: "Add Data" }] : []),
   ];

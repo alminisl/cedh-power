@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Swords, ArrowLeft, Loader2, Share2, CheckCircle } from "lucide-react";
+import { Swords, ArrowLeft, Loader2, Share2, CheckCircle, ClipboardCopy } from "lucide-react";
+import ExportDeckModal from "../components/ExportDeckModal";
 import { supabase } from "../lib/supabase";
 import { analyzeDeck } from "../lib/deckAnalyzer";
 import ResultsDashboard from "../components/ResultsDashboard";
@@ -28,7 +29,8 @@ function Sparkline({ snapshots }: { snapshots: Snapshot[] }) {
   const polylinePoints = points.map(([x, y]) => `${x},${y}`).join(" ");
   const last = values[values.length - 1];
   const prev = values[values.length - 2];
-  const color = last > prev + 0.001 ? "#22c55e" : last < prev - 0.001 ? "#ef4444" : "#6b7280";
+  // Lower avg pair power = stronger deck, so a falling score is good (green).
+  const color = last < prev - 0.001 ? "#22c55e" : last > prev + 0.001 ? "#ef4444" : "#6b7280";
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-14" preserveAspectRatio="none">
       <polyline points={polylinePoints} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -50,6 +52,7 @@ export default function DeckViewPage({ pairData }: DeckViewPageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
 
   const { cardTypes, typesLoading, groupedCards } = useCardTypes(
@@ -149,26 +152,35 @@ export default function DeckViewPage({ pairData }: DeckViewPageProps) {
           <span className="text-sm text-text-muted">
             {deck.cards.length} cards
           </span>
-          <button
-            onClick={handleShare}
-            className={`flex items-center gap-1.5 ml-auto px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-              copied
-                ? "bg-green-500/20 text-green-400 border border-green-500/40"
-                : "glass text-text-muted hover:text-text border border-border"
-            }`}
-          >
-            {copied ? (
-              <>
-                <CheckCircle className="w-3.5 h-3.5" />
-                Link copied
-              </>
-            ) : (
-              <>
-                <Share2 className="w-3.5 h-3.5" />
-                Share
-              </>
-            )}
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={() => setShowExport(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium glass text-text-muted hover:text-text border border-border transition-colors cursor-pointer"
+            >
+              <ClipboardCopy className="w-3.5 h-3.5" />
+              Export
+            </button>
+            <button
+              onClick={handleShare}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                copied
+                  ? "bg-green-500/20 text-green-400 border border-green-500/40"
+                  : "glass text-text-muted hover:text-text border border-border"
+              }`}
+            >
+              {copied ? (
+                <>
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  Link copied
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-3.5 h-3.5" />
+                  Share
+                </>
+              )}
+            </button>
+          </div>
         </div>
         {analysis && (
           <ResultsDashboard
@@ -184,7 +196,8 @@ export default function DeckViewPage({ pairData }: DeckViewPageProps) {
           const last = snapshots[snapshots.length - 1];
           const delta = last.power_rank - first.power_rank;
           const sign = delta > 0 ? "+" : "";
-          const trendColor = delta > 0.001 ? "text-green-400" : delta < -0.001 ? "text-red-400" : "text-text-muted";
+          // Lower avg pair power = stronger deck, so negative delta is good.
+          const trendColor = delta < -0.001 ? "text-green-400" : delta > 0.001 ? "text-red-400" : "text-text-muted";
           return (
             <div className="glass rounded-xl p-5">
               <div className="flex items-center justify-between mb-3">
@@ -203,6 +216,14 @@ export default function DeckViewPage({ pairData }: DeckViewPageProps) {
         })()}
 
       </main>
+
+      {showExport && deck && (
+        <ExportDeckModal
+          deckName={deck.deck_name || deck.commander || "Unnamed Deck"}
+          cards={deck.cards}
+          onClose={() => setShowExport(false)}
+        />
+      )}
     </div>
   );
 }

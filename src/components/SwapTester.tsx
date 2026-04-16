@@ -25,7 +25,7 @@ export default function SwapTester({
   const allCardNames = useMemo(() => {
     const names = new Set<string>();
     for (const key of Object.keys(pairData)) {
-      const [a, b] = key.split("|");
+      const [a, b] = key.split("|||");
       names.add(a);
       names.add(b);
     }

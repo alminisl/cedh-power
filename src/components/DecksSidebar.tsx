@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { History, Trash2, Loader2, Swords } from "lucide-react";
+import { History, Trash2, Loader2, Swords, ClipboardCopy } from "lucide-react";
 import type { HistoryEntry } from "../types";
 import type { Decklist } from "../hooks/useDecklists";
+import ExportDeckModal from "./ExportDeckModal";
 
 function formatTime(ts: string | number): string {
   const d = new Date(ts);
@@ -55,6 +56,7 @@ function SavedDecks({
   onDelete: (id: string) => void;
 }) {
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [exportDeck, setExportDeck] = useState<Decklist | null>(null);
 
   if (loading) {
     return (
@@ -121,12 +123,22 @@ function SavedDecks({
                       </button>
                     </div>
                   ) : (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setConfirmId(deck.id); }}
-                      className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-red-400 transition-all cursor-pointer ml-1"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                    <div className="flex items-center gap-1 ml-1 opacity-0 group-hover:opacity-100 transition-all">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setExportDeck(deck); }}
+                        className="text-text-muted hover:text-accent transition-colors cursor-pointer"
+                        title="Export decklist"
+                      >
+                        <ClipboardCopy className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setConfirmId(deck.id); }}
+                        className="text-text-muted hover:text-red-400 transition-colors cursor-pointer"
+                        title="Delete deck"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -150,6 +162,14 @@ function SavedDecks({
           ))}
         </ul>
       </div>
+
+      {exportDeck && (
+        <ExportDeckModal
+          deckName={exportDeck.deck_name || exportDeck.commander || "Unnamed Deck"}
+          cards={exportDeck.cards}
+          onClose={() => setExportDeck(null)}
+        />
+      )}
     </aside>
   );
 }

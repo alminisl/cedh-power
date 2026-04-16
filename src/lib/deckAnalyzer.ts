@@ -2,6 +2,14 @@ import type { PairData, DeckAnalysis, SwapResult } from "../types";
 
 const DEFAULT_POWER = 5.72;
 
+// Normalize smart/curly quotes to straight ASCII equivalents so deck list
+// card names match the pair data regardless of the export source (e.g. Moxfield).
+function normalizeCardName(name: string): string {
+  return name
+    .replace(/[\u2018\u2019\u201A\u201B\u02BC]/g, "'") // curly single quotes / apostrophes → '
+    .replace(/[\u201C\u201D\u201E\u201F]/g, '"');       // curly double quotes → "
+}
+
 export function parseDeckList(text: string): string[] {
   const lines = text.split("\n");
   const cards: string[] = [];
@@ -27,9 +35,10 @@ export function parseDeckList(text: string): string[] {
       ? stripped.split(" / ")[0].trim()
       : stripped;
 
-    if (name) {
+    const normalized = normalizeCardName(name);
+    if (normalized) {
       for (let i = 0; i < qty; i++) {
-        cards.push(name);
+        cards.push(normalized);
       }
     }
   }
