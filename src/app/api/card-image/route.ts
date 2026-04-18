@@ -9,7 +9,7 @@ const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 // CDN + browser cache duration for image responses.
 // After the first request populates Vercel's edge cache, all subsequent
 // requests are served from the CDN in ~10 ms without touching this route.
-const IMAGE_CACHE_HEADER = "public, max-age=86400, s-maxage=86400, stale-while-revalidate=86400";
+const IMAGE_CACHE_HEADER = "public, max-age=86400";
 
 async function resolveImageUrl(name: string, version: string): Promise<string | null> {
   const now = Date.now();
@@ -107,8 +107,6 @@ export async function GET(req: NextRequest) {
       headers: {
         "Content-Type": contentType,
         "Cache-Control": IMAGE_CACHE_HEADER,
-        // Allow downstream caches to vary by Accept (future webp support)
-        Vary: "Accept",
       },
     });
   } catch {
