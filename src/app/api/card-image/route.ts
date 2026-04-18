@@ -18,20 +18,48 @@ async function resolveImageUrl(name: string, version: string): Promise<string | 
     return cached.urls[version] ?? cached.urls["normal"] ?? null;
   }
 
-  const res = await fetch("https://brackend.brackcheck.com/api/cards/bulk-by-names", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ names: [name] }),
-  });
+  // Try brackend first
+  try {
+    const res = await fetch("https://brackend.brackcheck.com/api/cards/bulk-by-names", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ names: [name] }),
+    });
 
-  if (!res.ok) return null;
+    if (res.ok) {
+      const data = await res.json();
+      const nameLower = name.toLowerCase();
+      // Find the card that actually matches the requested name — don't blindly take [0]
+      // because the API may return cards in any order or return unrelated cards.
+      const card = (data.cards ?? []).find(
+        (c: { name?: string }) => c.name?.toLowerCase() === nameLower
+      ) ?? data.cards?.[0];
 
-  const data = await res.json();
-  const card = data.cards?.[0];
-  if (!card?.image_uris) return null;
+      // Support both normal cards (image_uris) and DFCs (card_faces[0].image_uris)
+      const imageUris = card?.image_uris ?? card?.card_faces?.[0]?.image_uris;
+      if (imageUris) {
+        serverCache.set(name, { urls: imageUris, ts: now });
+        return imageUris[version] ?? imageUris["normal"] ?? null;
+      }
+    }
+  } catch {
+    // fall through to Scryfall
+  }
 
-  serverCache.set(name, { urls: card.image_uris, ts: now });
-  return card.image_uris[version] ?? card.image_uris["normal"] ?? null;
+  // Fallback: fetch directly from Scryfall
+  try {
+    const scryfallRes = await fetch(
+      `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`
+    );
+    if (!scryfallRes.ok) return null;
+    const card = await scryfallRes.json();
+    const imageUris = card?.image_uris ?? card?.card_faces?.[0]?.image_uris;
+    if (!imageUris) return null;
+    serverCache.set(name, { urls: imageUris, ts: now });
+    return imageUris[version] ?? imageUris["normal"] ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function GET(req: NextRequest) {
