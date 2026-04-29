@@ -228,7 +228,7 @@ export default function DecksPage() {
                   if (commanders.length === 1) {
                     return (
                       <img
-                        src={`/api/card-image?name=${encodeURIComponent(commanders[0])}&version=art_crop`}
+                        src={`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(commanders[0])}&format=image&version=art_crop`}
                         alt=""
                         className="absolute inset-0 w-full h-full object-cover opacity-15 group-hover:opacity-25 transition-opacity"
                       />
@@ -239,7 +239,7 @@ export default function DecksPage() {
                       {commanders.slice(0, 2).map((c, i) => (
                         <img
                           key={i}
-                          src={`/api/card-image?name=${encodeURIComponent(c)}&version=art_crop`}
+                          src={`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(c)}&format=image&version=art_crop`}
                           alt=""
                           className="w-1/2 h-full object-cover opacity-15 group-hover:opacity-25 transition-opacity"
                         />

@@ -64,7 +64,9 @@ export async function GET(req: NextRequest) {
     status: 307,
     headers: {
       Location: imageUrl,
-      "Cache-Control": "no-store",
+      // Card images are permanent — cache at CDN for 7 days
+      "Cache-Control": "public, max-age=86400, s-maxage=604800",
+      "Netlify-CDN-Cache-Control": "public, s-maxage=604800",
     },
   });
 }

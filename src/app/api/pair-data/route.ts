@@ -16,7 +16,9 @@ export async function GET() {
     return new NextResponse(body, {
       headers: {
         "Content-Type": "application/json",
-        "Cache-Control": "public, max-age=300",
+        // CDN caches for 1h; browsers revalidate after 5min but use stale for 1h
+        "Cache-Control": "public, max-age=300, s-maxage=3600, stale-while-revalidate=3600",
+        "Netlify-CDN-Cache-Control": "public, s-maxage=3600",
       },
     });
   } catch {

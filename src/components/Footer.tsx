@@ -5,8 +5,12 @@ import type { ParquetVersion } from "../types";
 export default function Footer() {
   const [latest, setLatest] = useState<ParquetVersion | null>(null);
 
+  const versionsUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL
+    ? `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/parquetVersions.json`
+    : "/api/parquet-versions";
+
   useEffect(() => {
-    fetch("/api/parquet-versions")
+    fetch(versionsUrl)
       .then((r) => r.json())
       .then((versions: ParquetVersion[]) => {
         if (Array.isArray(versions) && versions.length > 0) setLatest(versions[0]);

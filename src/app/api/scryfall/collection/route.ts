@@ -55,10 +55,16 @@ export async function POST(req: NextRequest) {
       fresh.push(normalized);
     }
 
-    return NextResponse.json({
-      data: [...cached, ...fresh],
-      not_found: [],
-    });
+    return NextResponse.json(
+      { data: [...cached, ...fresh], not_found: [] },
+      {
+        headers: {
+          // Card data is stable — cache at CDN for 24h
+          "Cache-Control": "public, max-age=3600, s-maxage=86400",
+          "Netlify-CDN-Cache-Control": "public, s-maxage=86400",
+        },
+      }
+    );
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }

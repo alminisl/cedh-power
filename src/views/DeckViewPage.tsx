@@ -125,7 +125,7 @@ export default function DeckViewPage({ pairData }: DeckViewPageProps) {
               {commanders.slice(0, 2).map((c, i) => (
                 <img
                   key={i}
-                  src={`/api/card-image?name=${encodeURIComponent(c)}&version=art_crop`}
+                  src={`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(c)}&format=image&version=art_crop`}
                   alt=""
                   className="h-full object-cover opacity-15"
                   style={{ width: `${100 / commanders.length}%` }}

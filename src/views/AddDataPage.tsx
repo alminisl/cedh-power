@@ -116,7 +116,10 @@ export default function AddDataPage({
   async function fetchUploadHistory() {
     setHistoryLoading(true);
     try {
-      const res = await fetch("/api/parquet-versions");
+      const versionsUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL
+        ? `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/parquetVersions.json`
+        : "/api/parquet-versions";
+      const res = await fetch(versionsUrl);
       if (res.ok) {
         const data = await res.json();
         setUploadHistory(data);

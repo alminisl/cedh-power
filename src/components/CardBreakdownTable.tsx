@@ -27,7 +27,7 @@ function getQuartileColor(pct: number): string {
 function getCardImageUrl(cardName: string, cardData?: ScryfallCardData): string {
   if (cardData?.image_uris?.normal) return cardData.image_uris.normal;
   if (cardData?.card_faces?.[0]?.image_uris?.normal) return cardData.card_faces[0].image_uris.normal;
-  return `/api/card-image?name=${encodeURIComponent(cardName)}&version=normal`;
+  return `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(cardName)}&format=image&version=normal`;
 }
 
 type SortKey = keyof CardBreakdownItem;

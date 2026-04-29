@@ -21,7 +21,7 @@ export default function CardModal({ cardName, breakdown, onClose, prefetchedData
     setLoading(true);
     setError(false);
     setCard(null);
-    fetch("/api/scryfall/collection", {
+    fetch("https://api.scryfall.com/cards/collection", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ identifiers: [{ name: cardName }] }),

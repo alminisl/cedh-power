@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 const imageCache = new Set<string>();
 
 function getCardImageUrl(cardName: string): string {
-  return `/api/card-image?name=${encodeURIComponent(cardName)}&version=normal`;
+  return `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(cardName)}&format=image&version=normal`;
 }
 
 interface CardTooltipProps {

@@ -75,7 +75,7 @@ async function fetchCardTypes(cardNames: string[]): Promise<Map<string, Scryfall
     const batch = toFetch.slice(i, i + 75);
     const identifiers = batch.map((name) => ({ name }));
     try {
-      const res = await fetch("/api/scryfall/collection", {
+      const res = await fetch("https://api.scryfall.com/cards/collection", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifiers }),
