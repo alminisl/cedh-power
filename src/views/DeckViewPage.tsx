@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Swords, ArrowLeft, Loader2, Share2, CheckCircle, ClipboardCopy } from "lucide-react";
 import ExportDeckModal from "../components/ExportDeckModal";
-import { supabase } from "../lib/supabase";
 import { analyzeDeck } from "../lib/deckAnalyzer";
 import ResultsDashboard from "../components/ResultsDashboard";
 import { useCardTypes } from "../hooks/useCardTypes";
@@ -63,26 +62,18 @@ export default function DeckViewPage({ pairData }: DeckViewPageProps) {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    supabase
-      .from("decklists")
-      .select("*")
-      .eq("id", id)
-      .single()
-      .then(({ data, error }) => {
-        if (error) setError("Deck not found");
-        else setDeck(data);
-        setLoading(false);
-      });
-  }, [id]);
-
-  useEffect(() => {
-    if (!id) return;
-    supabase
-      .from("deck_snapshots")
-      .select("snapshot_date, power_rank")
-      .eq("deck_id", id)
-      .order("snapshot_date", { ascending: true })
-      .then(({ data }) => { if (data) setSnapshots(data); });
+    fetch(`/api/decks/${id}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Not found");
+        return res.json();
+      })
+      .then((data) => {
+        const { snapshots: snaps, ...deckData } = data;
+        setDeck(deckData);
+        if (Array.isArray(snaps)) setSnapshots(snaps);
+      })
+      .catch(() => setError("Deck not found"))
+      .finally(() => setLoading(false));
   }, [id]);
 
   const analysis: DeckAnalysis | null = useMemo(() => {

@@ -1,9 +1,23 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Swords, Trash2, Loader2, LogIn, ArrowUpDown, User } from "lucide-react";
+import { Swords, Trash2, Loader2, ArrowUpDown, User } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useDecklists } from "../hooks/useDecklists";
-import type { Decklist } from "../hooks/useDecklists";
+
+interface DeckSummary {
+  id: string;
+  user_id: string;
+  deck_name: string | null;
+  commander: string | null;
+  color_identity: string[];
+  power_rank: number;
+  average_pair_power: number;
+  pairs_found: number;
+  pairs_missing: number;
+  total_pairs: number;
+  created_at: string;
+  updated_at: string;
+}
 
 type SortKey = "power_rank" | "commander";
 
@@ -71,13 +85,30 @@ function formatTime(ts: string): string {
 }
 
 export default function DecksPage() {
-  const { user, signInWithDiscord } = useAuth();
-  const { decklists, loading, deleteDeck } = useDecklists(user?.id, { allUsers: true });
+  const { user } = useAuth();
+  const { deleteDeck } = useDecklists(user?.id);
+  const [decklists, setDecklists] = useState<DeckSummary[]>([]);
+  const [loading, setLoading] = useState(true);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("power_rank");
   const [sortAsc, setSortAsc] = useState(false);
   const [colorFilter, setColorFilter] = useState<Set<string>>(new Set());
   const [myDecksOnly, setMyDecksOnly] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/decks")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setDecklists(data);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  function handleDelete(id: string) {
+    deleteDeck(id);
+    setDecklists((prev) => prev.filter((d) => d.id !== id));
+    setConfirmDeleteId(null);
+  }
 
   function toggleColor(c: string) {
     setColorFilter((prev) => {
@@ -123,23 +154,6 @@ export default function DecksPage() {
     }
   }
 
-  if (!user) {
-    return (
-      <main className="max-w-4xl mx-auto px-4 py-16 text-center">
-        <Swords className="w-12 h-12 text-text-muted mx-auto mb-4" />
-        <h1 className="text-2xl font-bold mb-2">Decks</h1>
-        <p className="text-text-muted mb-6">Sign in with Discord to save and view decklists.</p>
-        <button
-          onClick={signInWithDiscord}
-          className="inline-flex items-center gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors cursor-pointer"
-        >
-          <LogIn className="w-4 h-4" />
-          Sign in with Discord
-        </button>
-      </main>
-    );
-  }
-
   return (
     <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
       <div className="flex items-center gap-3 flex-wrap">
@@ -166,7 +180,7 @@ export default function DecksPage() {
               >
                 {label}
                 {sortKey === key && (
-                  <span className="ml-0.5">{sortAsc ? "\u2191" : "\u2193"}</span>
+                  <span className="ml-0.5">{sortAsc ? "↑" : "↓"}</span>
                 )}
               </button>
             ))}
@@ -189,17 +203,19 @@ export default function DecksPage() {
               </button>
             )}
           </div>
-          <button
-            onClick={() => setMyDecksOnly(!myDecksOnly)}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-              myDecksOnly
-                ? "bg-accent/15 text-accent"
-                : "text-text-muted hover:text-text"
-            }`}
-          >
-            <User className="w-3.5 h-3.5" />
-            My Decks
-          </button>
+          {user && (
+            <button
+              onClick={() => setMyDecksOnly(!myDecksOnly)}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                myDecksOnly
+                  ? "bg-accent/15 text-accent"
+                  : "text-text-muted hover:text-text"
+              }`}
+            >
+              <User className="w-3.5 h-3.5" />
+              My Decks
+            </button>
+          )}
         </div>
       )}
 
@@ -260,7 +276,7 @@ export default function DecksPage() {
                       confirmDeleteId === deck.id ? (
                         <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.preventDefault()}>
                           <button
-                            onClick={() => { deleteDeck(deck.id); setConfirmDeleteId(null); }}
+                            onClick={() => handleDelete(deck.id)}
                             className="text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer"
                           >
                             Delete
@@ -290,9 +306,9 @@ export default function DecksPage() {
                         {deck.power_rank.toFixed(2)}
                       </p>
                     </div>
-                    <div title="Total number of cards in this decklist">
-                      <span className="text-text-muted">Cards</span>
-                      <p className="font-mono font-semibold">{deck.cards.length}</p>
+                    <div title="Total number of card pairs analyzed for this deck">
+                      <span className="text-text-muted">Total Pairs</span>
+                      <p className="font-mono font-semibold">{deck.total_pairs.toLocaleString()}</p>
                     </div>
                     <div title="Number of card pairs in this deck that have known synergy data">
                       <span className="text-text-muted">Pairs Found</span>
