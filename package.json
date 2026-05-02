@@ -10,9 +10,11 @@
     "lint": "next lint",
     "sync-data": "curl -s http://localhost:3000/api/pair-data -o src/data/pairData.json",
     "convert": "python scripts/convert_parquet.py",
-    "fetch-lands": "node scripts/fetchLandNames.mjs"
+    "fetch-lands": "node scripts/fetchLandNames.mjs",
+    "sandcastle": "npx tsx .sandcastle/main.ts"
   },
   "dependencies": {
+    "@ai-hero/sandcastle": "^0.5.7",
     "@aws-sdk/client-s3": "^3.1006.0",
     "@aws-sdk/s3-request-presigner": "^3.1006.0",
     "@supabase/supabase-js": "^2.98.0",
