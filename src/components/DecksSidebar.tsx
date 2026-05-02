@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { History, Trash2, Loader2, Swords, ClipboardCopy } from "lucide-react";
+import { History, Trash2, Loader2, Swords, ClipboardCopy, Share2, Check } from "lucide-react";
 import type { HistoryEntry } from "../types";
 import type { Decklist } from "../hooks/useDecklists";
 import ExportDeckModal from "./ExportDeckModal";
@@ -57,6 +57,15 @@ function SavedDecks({
 }) {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [exportDeck, setExportDeck] = useState<Decklist | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  function handleShare(deckId: string) {
+    const url = `${window.location.origin}/decks/${deckId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedId(deckId);
+      setTimeout(() => setCopiedId((id) => (id === deckId ? null : id)), 1500);
+    });
+  }
 
   if (loading) {
     return (
@@ -124,6 +133,15 @@ function SavedDecks({
                     </div>
                   ) : (
                     <div className="flex items-center gap-1 ml-1 opacity-0 group-hover:opacity-100 transition-all">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleShare(deck.id); }}
+                        className={`transition-colors cursor-pointer ${
+                          copiedId === deck.id ? "text-accent" : "text-text-muted hover:text-accent"
+                        }`}
+                        title={copiedId === deck.id ? "Link copied!" : "Copy deck link"}
+                      >
+                        {copiedId === deck.id ? <Check className="w-3 h-3" /> : <Share2 className="w-3 h-3" />}
+                      </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); setExportDeck(deck); }}
                         className="text-text-muted hover:text-accent transition-colors cursor-pointer"

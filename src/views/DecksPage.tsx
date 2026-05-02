@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Swords, Trash2, Loader2, ArrowUpDown, User } from "lucide-react";
+import "mana-font/css/mana.css";
 import { useAuth } from "../context/AuthContext";
 import { useDecklists } from "../hooks/useDecklists";
 
@@ -27,50 +28,37 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 ];
 
 const COLOR_ORDER = ["W", "U", "B", "R", "G"];
-const COLOR_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  W: { bg: "bg-amber-100", text: "text-amber-900", label: "W" },
-  U: { bg: "bg-blue-500", text: "text-white", label: "U" },
-  B: { bg: "bg-gray-800", text: "text-gray-200", label: "B" },
-  R: { bg: "bg-red-500", text: "text-white", label: "R" },
-  G: { bg: "bg-green-600", text: "text-white", label: "G" },
-};
 
 function ColorFilterButton({ color, active, onClick }: { color: string; active: boolean; onClick: () => void }) {
-  const style = COLOR_STYLES[color];
-  if (!style) return null;
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition-all cursor-pointer ${
+      title={`{${color}}`}
+      className={`inline-flex items-center justify-center w-7 h-7 rounded-full transition-all cursor-pointer ${
         active
-          ? `${style.bg} ${style.text} ring-2 ring-accent`
-          : `${style.bg} ${style.text} opacity-30 hover:opacity-60`
+          ? "ring-2 ring-accent opacity-100"
+          : "opacity-30 hover:opacity-60"
       }`}
     >
-      {style.label}
+      <i className={`ms ms-${color.toLowerCase()} ms-cost ms-shadow text-xl`} />
     </button>
   );
 }
 
 function ColorPips({ colors }: { colors: string[] }) {
   if (!colors || colors.length === 0) {
-    return <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-600 text-gray-300 text-[10px] font-bold">C</span>;
+    return <i className="ms ms-c ms-cost ms-shadow text-base" title="{C}" />;
   }
   const sorted = [...colors].sort((a, b) => COLOR_ORDER.indexOf(a) - COLOR_ORDER.indexOf(b));
   return (
-    <span className="inline-flex gap-0.5">
-      {sorted.map((c) => {
-        const style = COLOR_STYLES[c];
-        if (!style) return null;
-        return (
-          <span
-            key={c}
-            className={`inline-flex items-center justify-center w-5 h-5 rounded-full ${style.bg} ${style.text} text-[10px] font-bold`}
-          >
-            {style.label}
-          </span>
-        );
-      })}
+    <span className="inline-flex items-center gap-0.5">
+      {sorted.map((c) => (
+        <i
+          key={c}
+          className={`ms ms-${c.toLowerCase()} ms-cost ms-shadow text-base`}
+          title={`{${c}}`}
+        />
+      ))}
     </span>
   );
 }
