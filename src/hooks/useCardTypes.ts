@@ -142,7 +142,7 @@ export function useCardTypes(
 
   useEffect(() => {
     if (cards.length === 0) {
-      setCardTypes(new Map());
+      setCardTypes((prev) => (prev.size === 0 ? prev : new Map()));
       return;
     }
     load(cards);

@@ -82,62 +82,58 @@ const credentialsMount = {
 for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   console.log(`\n=== Iteration ${iteration}/${MAX_ITERATIONS} ===\n`);
 
+  // Implementer commits to this named branch. Using a fresh branch (rather
+  // than `merge-to-head`) keeps the changes off master so the reviewer can
+  // create its own worktree on the same branch — `merge-to-head` would land
+  // commits on master and delete the temp branch, leaving the reviewer with
+  // nothing distinct to check out and triggering a worktree collision.
+  const featureBranch = `sandcastle/iteration-${Date.now()}`;
+
   // -------------------------------------------------------------------------
   // Phase 1: Implement
-  //
-  // A sonnet agent picks the next open GitHub issue, creates a branch, writes
-  // the implementation (using RGR: Red → Green → Repeat → Refactor), and
-  // commits the result.
-  //
-  // The agent signals completion via <promise>COMPLETE</promise> when done.
-  // The result contains the branch name the agent worked on.
   // -------------------------------------------------------------------------
   const implement = await sandcastle.run({
     hooks,
     copyToWorktree,
     sandbox: docker({ mounts: [credentialsMount] }),
-    branchStrategy: { type: "merge-to-head" },
+    branchStrategy: { type: "branch", branch: featureBranch },
     name: "implementer",
     maxIterations: 100,
     agent: sandcastle.claudeCode("claude-opus-4-6"),
     promptFile: "./.sandcastle/implement-prompt.md",
   });
 
-  // Extract the branch the agent worked on so the reviewer can target it.
-  const branch = implement.branch;
-
   if (!implement.commits.length) {
     console.log("Implementation agent made no commits. Skipping review.");
     continue;
   }
 
-  console.log(`\nImplementation complete on branch: ${branch}`);
+  console.log(`\nImplementation complete on branch: ${featureBranch}`);
   console.log(`Commits: ${implement.commits.length}`);
 
   // -------------------------------------------------------------------------
   // Phase 2: Review
-  //
-  // A second sonnet agent reviews the diff of the branch produced by Phase 1.
-  // It uses the {{BRANCH}} prompt argument to inspect the right branch, and
-  // either approves or makes corrections directly on the branch.
   // -------------------------------------------------------------------------
   await sandcastle.run({
     hooks,
     copyToWorktree,
     sandbox: docker({ mounts: [credentialsMount] }),
-    branchStrategy: { type: "branch", branch },
+    branchStrategy: { type: "branch", branch: featureBranch },
     name: "reviewer",
     maxIterations: 1,
     agent: sandcastle.claudeCode("claude-opus-4-6"),
     promptFile: "./.sandcastle/review-prompt.md",
-    // Prompt arguments substitute {{BRANCH}} in review-prompt.md before the
-    // agent sees the prompt.
     promptArgs: {
-      BRANCH: branch,
+      BRANCH: featureBranch,
     },
   });
 
   console.log("\nReview complete.");
+  console.log(
+    `\nBranch ready for merge: ${featureBranch}\n` +
+      `To merge into master:\n` +
+      `  git merge --no-ff ${featureBranch} && git branch -d ${featureBranch}\n`,
+  );
 }
 
 console.log("\nAll done.");
