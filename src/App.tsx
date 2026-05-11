@@ -10,6 +10,7 @@ import LeaderboardPage from "./views/LeaderboardPage";
 import DecksPage from "./views/DecksPage";
 import DeckViewPage from "./views/DeckViewPage";
 import ComparePage from "./views/ComparePage";
+import PrimersPage from "./views/PrimersPage";
 import FeedbackButton from "./components/FeedbackButton";
 import Footer from "./components/Footer";
 import AboutPage from "./views/AboutPage";
@@ -260,6 +261,7 @@ export default function App() {
           <Route path="/decks/:id" element={<DeckViewPage pairData={mergedData} />} />
           <Route path="/leaderboard" element={<LeaderboardPage pairData={mergedData} />} />
           <Route path="/compare" element={<ComparePage pairData={mergedData} />} />
+          <Route path="/primers" element={<PrimersPage />} />
           <Route path="/about" element={<AboutPage />} />
         </Routes>
       </div>

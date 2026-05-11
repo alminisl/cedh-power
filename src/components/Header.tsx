@@ -17,6 +17,7 @@ export default function Header({ customPairCount = 0, isAdmin = false, onToggleS
     { to: "/decks", label: "Decks" },
     { to: "/compare", label: "Compare" },
     { to: "/leaderboard", label: "Leaderboard" },
+    { to: "/primers", label: "Primers" },
     ...(isAdmin ? [{ to: "/add", label: "Add Data" }] : []),
   ];
 
