@@ -22,6 +22,7 @@
     "lucide-react": "^0.576.0",
     "mana-font": "^1.18.0",
     "next": "^15.3.0",
+    "pdfjs-dist": "^5.7.284",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.13.1",

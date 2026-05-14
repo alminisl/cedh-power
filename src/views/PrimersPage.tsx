@@ -11,6 +11,7 @@ interface Primer {
   file_name: string;
   uploaded_by: string | null;
   created_at: string;
+  thumbnail_key: string | null;
 }
 
 interface DeckOption {
@@ -126,79 +127,108 @@ export default function PrimersPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((primer) => (
-            <div
-              key={primer.id}
-              className="relative rounded-xl overflow-hidden border border-border/50 hover:border-accent/30 group transition-colors"
-            >
-              <img
-                src={`/api/card-image?name=${encodeURIComponent(primer.commander.split(" / ")[0])}&version=art_crop`}
-                alt=""
-                className="absolute inset-0 w-full h-full object-cover opacity-15 group-hover:opacity-25 transition-opacity"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/80 to-transparent" />
-              <div className="relative p-5 space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <h3 className="font-semibold leading-tight">{primer.title}</h3>
-                    <p className="text-sm text-text-muted mt-0.5 truncate">{primer.commander}</p>
+            primer.thumbnail_key ? (
+              <div
+                key={primer.id}
+                className="relative rounded-xl overflow-hidden border border-border/50 hover:border-accent/30 group transition-colors aspect-[3/4]"
+              >
+                <img
+                  src={`/api/primers/${primer.id}/thumbnail`}
+                  alt={primer.title}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent pt-10 pb-3.5 px-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="text-[0.8rem] font-semibold leading-tight text-white">{primer.title}</h3>
+                      <p className="text-[0.72rem] text-white/60 mt-0.5 truncate">{primer.commander}</p>
+                    </div>
+                    {isAdmin && (
+                      confirmDeleteId === primer.id ? (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button onClick={() => handleDelete(primer.id)} className="text-[0.65rem] text-red-400 hover:text-red-300 font-semibold cursor-pointer">Delete</button>
+                          <button onClick={() => setConfirmDeleteId(null)} className="text-[0.65rem] text-white/50 hover:text-white cursor-pointer ml-1">Cancel</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setConfirmDeleteId(primer.id)} className="opacity-0 group-hover:opacity-100 text-white/50 hover:text-red-400 transition-all cursor-pointer shrink-0">
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )
+                    )}
                   </div>
-                  {isAdmin && (
-                    confirmDeleteId === primer.id ? (
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          onClick={() => handleDelete(primer.id)}
-                          className="text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer"
-                        >
-                          Delete
-                        </button>
-                        <button
-                          onClick={() => setConfirmDeleteId(null)}
-                          className="text-xs text-text-muted hover:text-text cursor-pointer ml-1"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setConfirmDeleteId(primer.id)}
-                        className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-red-400 transition-all cursor-pointer shrink-0"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => openPdf(primer.id, "view")}
+                      disabled={actionLoading === `${primer.id}-view`}
+                      className="flex items-center gap-1 px-2.5 py-1 bg-accent/20 hover:bg-accent/35 text-accent text-[0.65rem] font-medium rounded-md transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {actionLoading === `${primer.id}-view` ? <Loader2 className="w-3 h-3 animate-spin" /> : <Eye className="w-3 h-3" />}
+                      View
+                    </button>
+                    <button
+                      onClick={() => openPdf(primer.id, "download")}
+                      disabled={actionLoading === `${primer.id}-download`}
+                      className="flex items-center gap-1 px-2.5 py-1 border border-white/20 hover:border-white/40 text-white/60 hover:text-white text-[0.65rem] font-medium rounded-md transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {actionLoading === `${primer.id}-download` ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                      Download
+                    </button>
+                  </div>
+                  <p className="text-[0.62rem] text-white/40">{formatDate(primer.created_at)}</p>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => openPdf(primer.id, "view")}
-                    disabled={actionLoading === `${primer.id}-view`}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-accent/15 hover:bg-accent/25 text-accent text-xs font-medium rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    {actionLoading === `${primer.id}-view` ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Eye className="w-3.5 h-3.5" />
-                    )}
-                    View
-                  </button>
-                  <button
-                    onClick={() => openPdf(primer.id, "download")}
-                    disabled={actionLoading === `${primer.id}-download`}
-                    className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:border-accent/30 text-text-muted hover:text-text text-xs font-medium rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    {actionLoading === `${primer.id}-download` ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Download className="w-3.5 h-3.5" />
-                    )}
-                    Download
-                  </button>
-                </div>
-
-                <p className="text-xs text-text-muted/60">{formatDate(primer.created_at)}</p>
               </div>
-            </div>
+            ) : (
+              <div
+                key={primer.id}
+                className="relative rounded-xl overflow-hidden border border-border/50 hover:border-accent/30 group transition-colors"
+              >
+                <img
+                  src={`/api/card-image?name=${encodeURIComponent(primer.commander.split(" / ")[0])}&version=art_crop`}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover opacity-15 group-hover:opacity-25 transition-opacity"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/80 to-transparent" />
+                <div className="relative p-5 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="font-semibold leading-tight">{primer.title}</h3>
+                      <p className="text-sm text-text-muted mt-0.5 truncate">{primer.commander}</p>
+                    </div>
+                    {isAdmin && (
+                      confirmDeleteId === primer.id ? (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button onClick={() => handleDelete(primer.id)} className="text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer">Delete</button>
+                          <button onClick={() => setConfirmDeleteId(null)} className="text-xs text-text-muted hover:text-text cursor-pointer ml-1">Cancel</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setConfirmDeleteId(primer.id)} className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-red-400 transition-all cursor-pointer shrink-0">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => openPdf(primer.id, "view")}
+                      disabled={actionLoading === `${primer.id}-view`}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-accent/15 hover:bg-accent/25 text-accent text-xs font-medium rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {actionLoading === `${primer.id}-view` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
+                      View
+                    </button>
+                    <button
+                      onClick={() => openPdf(primer.id, "download")}
+                      disabled={actionLoading === `${primer.id}-download`}
+                      className="flex items-center gap-1.5 px-3 py-1.5 border border-border hover:border-accent/30 text-text-muted hover:text-text text-xs font-medium rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {actionLoading === `${primer.id}-download` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                      Download
+                    </button>
+                  </div>
+                  <p className="text-xs text-text-muted/60">{formatDate(primer.created_at)}</p>
+                </div>
+              </div>
+            )
           ))}
         </div>
       )}
@@ -215,6 +245,30 @@ export default function PrimersPage() {
       )}
     </main>
   );
+}
+
+async function generatePdfThumbnail(file: File): Promise<Blob> {
+  const pdfjs = await import("pdfjs-dist");
+  pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+  const page = await pdf.getPage(1);
+  const viewport = page.getViewport({ scale: 1.5 });
+
+  const canvas = document.createElement("canvas");
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  const ctx = canvas.getContext("2d")!;
+
+  await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error("Canvas to blob failed"))),
+      "image/png"
+    );
+  });
 }
 
 interface UploadModalProps {
@@ -281,18 +335,25 @@ function UploadModal({ onClose, onSuccess, userEmail }: UploadModalProps) {
     try {
       setStatus("uploading");
 
-      const urlRes = await fetch("/api/primers/upload-url", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${secret}` },
-      });
-      if (!urlRes.ok) throw new Error("Failed to get upload URL");
-      const { url, key } = await urlRes.json();
+      const [thumbnailBlob, urlRes] = await Promise.all([
+        generatePdfThumbnail(file).catch(() => null),
+        fetch("/api/primers/upload-url", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${secret}` },
+        }),
+      ]);
 
-      const uploadRes = await fetch(url, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": "application/pdf" },
-      });
+      if (!urlRes.ok) throw new Error("Failed to get upload URL");
+      const { url, key, thumbUrl, thumbKey } = await urlRes.json();
+
+      const uploads: Promise<Response>[] = [
+        fetch(url, { method: "PUT", body: file, headers: { "Content-Type": "application/pdf" } }),
+      ];
+      if (thumbnailBlob && thumbUrl) {
+        uploads.push(fetch(thumbUrl, { method: "PUT", body: thumbnailBlob, headers: { "Content-Type": "image/png" } }));
+      }
+
+      const [uploadRes] = await Promise.all(uploads);
       if (!uploadRes.ok) throw new Error("File upload to storage failed");
 
       setStatus("saving");
@@ -310,6 +371,7 @@ function UploadModal({ onClose, onSuccess, userEmail }: UploadModalProps) {
           file_key: key,
           file_name: file.name,
           uploaded_by: userEmail,
+          thumbnail_key: thumbnailBlob && thumbKey ? thumbKey : null,
         }),
       });
       if (!metaRes.ok) {

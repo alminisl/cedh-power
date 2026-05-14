@@ -5,7 +5,7 @@ export async function GET() {
   const supabase = getServerSupabase();
   const { data, error } = await supabase
     .from("primers")
-    .select("id, title, commander, deck_id, file_key, file_name, uploaded_by, created_at")
+    .select("id, title, commander, deck_id, file_key, file_name, uploaded_by, created_at, thumbnail_key")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { title, commander, deck_id, file_key, file_name, uploaded_by } = body;
+    const { title, commander, deck_id, file_key, file_name, uploaded_by, thumbnail_key } = body;
 
     if (!title?.trim() || !commander?.trim() || !file_key || !file_name) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
         file_key,
         file_name,
         uploaded_by: uploaded_by || null,
+        thumbnail_key: thumbnail_key || null,
       })
       .select()
       .single();
