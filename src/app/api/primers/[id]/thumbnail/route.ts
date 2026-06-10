@@ -25,7 +25,7 @@ export async function GET(
       new GetObjectCommand({ Bucket: R2_BUCKET, Key: primer.thumbnail_key })
     );
 
-    return new NextResponse(response.Body as ReadableStream, {
+    return new NextResponse(response.Body!.transformToWebStream(), {
       headers: {
         "Content-Type": "image/png",
         "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
