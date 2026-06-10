@@ -49,10 +49,6 @@ function saveCache(cache: Record<string, { data: ScryfallCardData; ts: number }>
   }
 }
 
-function sleep(ms: number) {
-  return new Promise<void>((resolve) => setTimeout(resolve, ms));
-}
-
 async function fetchCardTypes(cardNames: string[]): Promise<Map<string, ScryfallCardData>> {
   const result = new Map<string, ScryfallCardData>();
   const now = Date.now();
@@ -71,7 +67,6 @@ async function fetchCardTypes(cardNames: string[]): Promise<Map<string, Scryfall
   if (toFetch.length === 0) return result;
 
   for (let i = 0; i < toFetch.length; i += 75) {
-    if (i > 0) await sleep(100);
     const batch = toFetch.slice(i, i + 75);
     const identifiers = batch.map((name) => ({ name }));
     try {
@@ -149,7 +144,7 @@ export function useCardTypes(
   }, [cards, load]);
 
   const groupedCards = useMemo(() => {
-    if (cardTypes.size === 0) return null;
+    if (cards.length === 0) return null;
     const groups: Record<string, string[]> = {};
     for (const cat of TYPE_CATEGORIES) groups[cat] = [];
 

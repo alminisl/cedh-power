@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const APP_ORIGIN = process.env.APP_ORIGIN ?? "http://localhost:3000";
+
 async function resolveImageUrl(name: string, version: string): Promise<string | null> {
   // Try brackend first
   try {
     const res = await fetch("https://brackend.brackcheck.com/api/cards/bulk-by-names", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Origin": APP_ORIGIN },
       body: JSON.stringify({ names: [name] }),
     });
 
@@ -17,9 +19,8 @@ async function resolveImageUrl(name: string, version: string): Promise<string | 
       ) ?? data.cards?.[0];
 
       const imageUris = card?.image_uris ?? card?.card_faces?.[0]?.image_uris;
-      if (imageUris) {
-        return imageUris[version] ?? imageUris["normal"] ?? null;
-      }
+      const imageUrl = imageUris?.[version] ?? imageUris?.["normal"] ?? null;
+      if (imageUrl) return imageUrl;
     }
   } catch {
     // fall through to Scryfall
@@ -64,7 +65,7 @@ export async function GET(req: NextRequest) {
     status: 307,
     headers: {
       Location: imageUrl,
-      "Cache-Control": "no-store",
+      "Cache-Control": "public, max-age=604800, immutable",
     },
   });
 }

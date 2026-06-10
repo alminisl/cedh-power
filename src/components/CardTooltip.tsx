@@ -10,11 +10,14 @@ function getCardImageUrl(cardName: string): string {
 
 interface CardTooltipProps {
   cardName: string;
+  imageUrl?: string;
   children: ReactNode;
 }
 
-export default function CardTooltip({ cardName, children }: CardTooltipProps) {
+export default function CardTooltip({ cardName, imageUrl, children }: CardTooltipProps) {
   const [visible, setVisible] = useState(false);
+  // Only mount the portal after the first hover — prevents 100 img requests on table render.
+  const [mounted, setMounted] = useState(false);
   const [loaded, setLoaded] = useState(() => imageCache.has(cardName));
   const [errored, setErrored] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
@@ -30,6 +33,7 @@ export default function CardTooltip({ cardName, children }: CardTooltipProps) {
   }, []);
 
   const handleMouseEnter = useCallback(() => {
+    setMounted(true);
     if (hideRef.current) clearTimeout(hideRef.current);
     showRef.current = setTimeout(() => {
       if (!spanRef.current) return;
@@ -73,7 +77,7 @@ export default function CardTooltip({ cardName, children }: CardTooltipProps) {
       className="cursor-pointer"
     >
       {children}
-      {createPortal(
+      {mounted && createPortal(
         <div
           className="fixed z-[9999] pointer-events-none transition-opacity duration-150"
           style={{
@@ -90,9 +94,11 @@ export default function CardTooltip({ cardName, children }: CardTooltipProps) {
               </div>
             )}
             <img
-              src={getCardImageUrl(cardName)}
+              src={imageUrl ?? getCardImageUrl(cardName)}
               alt={cardName}
               width={250}
+              height={349}
+              decoding="async"
               className={`rounded-md ${loaded ? "block" : "hidden"}`}
               onLoad={handleLoad}
               onError={() => setErrored(true)}

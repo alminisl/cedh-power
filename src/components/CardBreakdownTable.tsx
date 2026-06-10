@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Search, ArrowUpDown, LayoutList, List, Loader2 } from "lucide-react";
 import type { CardBreakdownItem, ScryfallCardData } from "../types";
 import CardTooltip from "./CardTooltip";
@@ -49,6 +49,8 @@ export default function CardBreakdownTable({ breakdown, selectedCard, onSelectCa
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [modalCard, setModalCard] = useState<string | null>(null);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const tbodyRef = useRef<HTMLTableSectionElement>(null);
+  const preloadedRef = useRef(new Set<string>());
 
   const sorted = useMemo(() => {
     const filtered = filter
@@ -65,6 +67,27 @@ export default function CardBreakdownTable({ breakdown, selectedCard, onSelectCa
       return sortAsc ? (av as number) - (bv as number) : (bv as number) - (av as number);
     });
   }, [breakdown, filter, sortKey, sortAsc]);
+
+  useEffect(() => {
+    if (!cardDataMap || !tbodyRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const name = (entry.target as HTMLElement).dataset.cardName;
+          if (!name || preloadedRef.current.has(name)) continue;
+          preloadedRef.current.add(name);
+          const data = cardDataMap.get(name);
+          const url = data?.image_uris?.normal ?? data?.card_faces?.[0]?.image_uris?.normal;
+          if (url) new Image().src = url;
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    const rows = tbodyRef.current.querySelectorAll("[data-card-name]");
+    rows.forEach((row) => observer.observe(row));
+    return () => observer.disconnect();
+  }, [cardDataMap, sorted]);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) setSortAsc(!sortAsc);
@@ -212,16 +235,19 @@ export default function CardBreakdownTable({ breakdown, selectedCard, onSelectCa
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody ref={tbodyRef}>
               {sorted.map((card, i) => {
                 const percentile =
                   sorted.length > 1
                     ? Math.round(((sorted.length - 1 - i) / (sorted.length - 1)) * 100)
                     : 100;
+                const cardData = cardDataMap?.get(card.name);
+                const directImageUrl = cardData?.image_uris?.normal ?? cardData?.card_faces?.[0]?.image_uris?.normal;
 
                 return (
                   <tr
                     key={card.name}
+                    data-card-name={card.name}
                     onClick={() => onSelectCard?.(card.name)}
                     className={`border-b border-border/50 transition-colors ${
                       onSelectCard ? "cursor-pointer" : ""
@@ -233,7 +259,7 @@ export default function CardBreakdownTable({ breakdown, selectedCard, onSelectCa
                   >
                     <td className="py-2 text-text-muted">{i + 1}</td>
                     <td className="py-2 font-medium">
-                      <CardTooltip cardName={card.name}>
+                      <CardTooltip cardName={card.name} imageUrl={directImageUrl ?? getCardImageUrl(card.name, cardData)}>
                         <button
                           onClick={(e) => { e.stopPropagation(); setModalCard(card.name); }}
                           className="hover:text-accent transition-colors cursor-pointer text-left"
@@ -270,14 +296,17 @@ export default function CardBreakdownTable({ breakdown, selectedCard, onSelectCa
             </tbody>
           </table>
         </div>
-      ) : typesLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-5 h-5 text-accent animate-spin" />
-        </div>
       ) : groupedCards ? (
 
         /* ── List view (Moxfield style) ── */
         <>
+          {typesLoading && (
+            <div className="flex items-center gap-2 mb-3 text-xs text-text-muted">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Organizing by type...
+            </div>
+          )}
+
           {/* Mobile: single column */}
           <div className="flex flex-col gap-5 md:hidden">
             {activeGroups.map((g) => renderListSection(g.key, g.label, g.cards))}
@@ -297,7 +326,9 @@ export default function CardBreakdownTable({ breakdown, selectedCard, onSelectCa
                       src={getCardImageUrl(previewCardName, previewCardData)}
                       alt={previewCardName}
                       className="w-full h-auto block"
-                      loading="eager"
+                      width={208}
+                      height={289}
+                      decoding="async"
                     />
                   </div>
 

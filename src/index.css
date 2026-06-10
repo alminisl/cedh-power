@@ -20,6 +20,11 @@ body {
   min-height: 100vh;
 }
 
+@keyframes loading-bar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
 .glass {
   background: rgba(19, 19, 26, 0.7);
   backdrop-filter: blur(12px);

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const APP_ORIGIN = process.env.APP_ORIGIN ?? "http://localhost:3000";
+
 // Server-side per-card cache — survives across requests within the same process
 const serverCache = new Map<string, { data: unknown; ts: number }>();
 const SERVER_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
@@ -22,37 +24,60 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // All cards already cached — return immediately, no Scryfall call
+    // All cards already cached — return immediately
     if (toFetch.length === 0) {
       return NextResponse.json({ data: cached, not_found: [] });
     }
 
-    const res = await fetch("https://brackend.brackcheck.com/api/cards/bulk-by-names", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ names: toFetch.map((i) => i.name) }),
-    });
-
-    if (!res.ok) {
-      // Return whatever we have from cache, pass through the status code
-      return NextResponse.json(
-        { data: cached, not_found: [], error: res.statusText },
-        { status: res.status }
-      );
-    }
-
-    const data = await res.json();
-
-    // Deduplicate by name (bulk-by-names returns multiple printings per name),
-    // then normalize set_code → set to match ScryfallCardData shape
     const seen = new Set<string>();
     const fresh: unknown[] = [];
-    for (const card of data.cards ?? []) {
-      if (seen.has(card.name)) continue;
-      seen.add(card.name);
-      const normalized = { ...card, set: card.set_code ?? card.set };
-      serverCache.set(card.name, { data: normalized, ts: now });
-      fresh.push(normalized);
+    let stillNeeded = toFetch.map((i) => i.name);
+
+    // Primary: brackend
+    try {
+      const res = await fetch("https://brackend.brackcheck.com/api/cards/bulk-by-names", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Origin": APP_ORIGIN },
+        body: JSON.stringify({ names: stillNeeded }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        // Deduplicate by name; normalize set_code → set to match ScryfallCardData shape
+        for (const card of data.cards ?? []) {
+          if (seen.has(card.name)) continue;
+          seen.add(card.name);
+          const normalized = { ...card, set: card.set_code ?? card.set };
+          serverCache.set(card.name, { data: normalized, ts: now });
+          fresh.push(normalized);
+        }
+        stillNeeded = stillNeeded.filter((n) => !seen.has(n));
+      }
+    } catch {
+      // fall through to Scryfall
+    }
+
+    // Fallback: Scryfall collection for anything brackend didn't return
+    if (stillNeeded.length > 0) {
+      try {
+        const sfRes = await fetch("https://api.scryfall.com/cards/collection", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identifiers: stillNeeded.map((name) => ({ name })) }),
+        });
+
+        if (sfRes.ok) {
+          const sfData = await sfRes.json();
+          for (const card of sfData.data ?? []) {
+            if (seen.has(card.name)) continue;
+            seen.add(card.name);
+            serverCache.set(card.name, { data: card, ts: now });
+            fresh.push(card);
+          }
+        }
+      } catch {
+        // ignore
+      }
     }
 
     return NextResponse.json({

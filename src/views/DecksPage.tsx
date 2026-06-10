@@ -234,6 +234,8 @@ export default function DecksPage() {
                       <img
                         src={`/api/card-image?name=${encodeURIComponent(commanders[0])}&version=art_crop`}
                         alt=""
+                        loading="lazy"
+                        decoding="async"
                         className="absolute inset-0 w-full h-full object-cover opacity-15 group-hover:opacity-25 transition-opacity"
                       />
                     );
@@ -245,6 +247,8 @@ export default function DecksPage() {
                           key={i}
                           src={`/api/card-image?name=${encodeURIComponent(c)}&version=art_crop`}
                           alt=""
+                          loading="lazy"
+                          decoding="async"
                           className="w-1/2 h-full object-cover opacity-15 group-hover:opacity-25 transition-opacity"
                         />
                       ))}
