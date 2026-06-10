@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 const APP_ORIGIN = process.env.APP_ORIGIN ?? "http://localhost:3000";
 
-async function resolveImageUrl(name: string, version: string): Promise<string | null> {
-  // Try brackend first
+async function resolveImageUrl(name: string, version: string): Promise<string> {
+  // Try brackend first for a direct CDN URL
   try {
     const res = await fetch("https://brackend.brackcheck.com/api/cards/bulk-by-names", {
       method: "POST",
@@ -26,19 +26,8 @@ async function resolveImageUrl(name: string, version: string): Promise<string | 
     // fall through to Scryfall
   }
 
-  // Fallback: fetch directly from Scryfall
-  try {
-    const scryfallRes = await fetch(
-      `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`
-    );
-    if (!scryfallRes.ok) return null;
-    const card = await scryfallRes.json();
-    const imageUris = card?.image_uris ?? card?.card_faces?.[0]?.image_uris;
-    if (!imageUris) return null;
-    return imageUris[version] ?? imageUris["normal"] ?? null;
-  } catch {
-    return null;
-  }
+  // Fallback: redirect browser directly to Scryfall's image endpoint — no server-side fetch needed
+  return `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}&format=image&version=${version}`;
 }
 
 export async function GET(req: NextRequest) {
@@ -50,16 +39,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "name is required" }, { status: 400 });
   }
 
-  let imageUrl: string | null = null;
-  try {
-    imageUrl = await resolveImageUrl(name, version);
-  } catch {
-    return NextResponse.json({ error: "upstream error" }, { status: 502 });
-  }
-
-  if (!imageUrl) {
-    return NextResponse.json({ error: "card not found" }, { status: 404 });
-  }
+  const imageUrl = await resolveImageUrl(name, version);
 
   return new NextResponse(null, {
     status: 307,
