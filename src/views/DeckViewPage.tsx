@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Swords, ArrowLeft, Loader2, Share2, CheckCircle, ClipboardCopy } from "lucide-react";
 import ExportDeckModal from "../components/ExportDeckModal";
@@ -13,30 +13,136 @@ interface Snapshot {
   power_rank: number;
 }
 
-function Sparkline({ snapshots }: { snapshots: Snapshot[] }) {
+const fmtDate = (d: string) => { const [y, m, day] = d.split("-"); return `${day}-${m}-${y}`; };
+
+function PowerRankChart({ snapshots }: { snapshots: Snapshot[] }) {
+  const [tooltip, setTooltip] = useState<{ idx: number; left: number; top: number } | null>(null);
+
   if (snapshots.length < 2) return null;
-  const W = 100, H = 50, PAD = 4;
+
+  const W = 560, H = 100;
+  const cH = H - 6;
+
   const values = snapshots.map((s) => s.power_rank);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 0.01;
-  const points = snapshots.map((s, i) => {
-    const x = PAD + (i / (snapshots.length - 1)) * (W - PAD * 2);
-    const y = H - PAD - ((s.power_rank - min) / range) * (H - PAD * 2);
-    return [x, y] as [number, number];
-  });
-  const polylinePoints = points.map(([x, y]) => `${x},${y}`).join(" ");
-  const last = values[values.length - 1];
-  const prev = values[values.length - 2];
-  // Lower avg pair power = stronger deck, so a falling score is good (green).
-  const color = last < prev - 0.001 ? "#22c55e" : last > prev + 0.001 ? "#ef4444" : "#6b7280";
+  const rawMin = Math.min(...values);
+  const rawMax = Math.max(...values);
+  const rawRange = rawMax - rawMin || 1;
+  const yMin = rawMin - rawRange * 0.18;
+  const yMax = rawMax + rawRange * 0.18;
+  const yRange = yMax - yMin;
+
+  const toX = (i: number) => (i / (snapshots.length - 1)) * W;
+  const toY = (v: number) => 6 + cH - ((v - yMin) / yRange) * cH;
+
+  const pts = snapshots.map((s, i) => [toX(i), toY(s.power_rank)] as [number, number]);
+
+  const linePath = pts.reduce((acc, [x, y], i) => {
+    if (i === 0) return `M${x},${y}`;
+    const [px, py] = pts[i - 1];
+    const mx = (px + x) / 2;
+    return `${acc} C${mx},${py} ${mx},${y} ${x},${y}`;
+  }, "");
+
+  const areaPath = `${linePath} L${pts[pts.length - 1][0]},${H} L${pts[0][0]},${H} Z`;
+
+  const delta = values[values.length - 1] - values[0];
+  const color = delta > 0.001 ? "#22c55e" : delta < -0.001 ? "#ef4444" : "#6b7280";
+
+  const peakIdx = values.indexOf(rawMax);
+  const peakDate = snapshots[peakIdx].snapshot_date;
+  const mid = Math.floor((snapshots.length - 1) / 2);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const xFrac = (e.clientX - rect.left) / rect.width;
+    const idx = Math.max(0, Math.min(snapshots.length - 1, Math.round(xFrac * (snapshots.length - 1))));
+    const left = (pts[idx][0] / W) * rect.width;
+    const top = (pts[idx][1] / H) * rect.height;
+    setTooltip({ idx, left, top });
+  };
+
+  const tipAnchor = tooltip
+    ? tooltip.idx < snapshots.length * 0.25
+      ? "translateY(calc(-100% - 8px))"
+      : tooltip.idx > snapshots.length * 0.75
+      ? "translate(-100%, calc(-100% - 8px))"
+      : "translate(-50%, calc(-100% - 8px))"
+    : "";
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-14" preserveAspectRatio="none">
-      <polyline points={polylinePoints} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      {points.map(([x, y], i) => (
-        <circle key={i} cx={x} cy={y} r="2.5" fill={color} />
-      ))}
-    </svg>
+    <div>
+      <div className="relative">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-28" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="prAreaGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+              <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+            </linearGradient>
+          </defs>
+          {[0.2, 0.5, 0.8].map((f, i) => (
+            <line key={i} x1={0} y1={toY(yMin + yRange * f)} x2={W} y2={toY(yMin + yRange * f)} stroke="#ffffff0d" strokeWidth="1" />
+          ))}
+          <path d={areaPath} fill="url(#prAreaGrad)" />
+          <path d={linePath} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx={pts[pts.length - 1][0]} cy={pts[pts.length - 1][1]} r="5" fill={color} fillOpacity="0.2" />
+          <circle cx={pts[pts.length - 1][0]} cy={pts[pts.length - 1][1]} r="2.5" fill={color} />
+        </svg>
+
+        {/* mouse tracking overlay */}
+        <div
+          className="absolute inset-0 cursor-crosshair"
+          onMouseMove={handleMouseMove}
+          onMouseLeave={() => setTooltip(null)}
+        />
+
+        {tooltip && (
+          <>
+            <div className="absolute top-0 bottom-0 w-px bg-white/10 pointer-events-none" style={{ left: tooltip.left }} />
+            <div
+              className="absolute w-3 h-3 rounded-full pointer-events-none border-2 border-black/30"
+              style={{ left: tooltip.left, top: tooltip.top, transform: "translate(-50%, -50%)", backgroundColor: color }}
+            />
+            <div
+              className="absolute pointer-events-none z-10 glass border border-border rounded-lg px-2.5 py-1.5 shadow-lg"
+              style={{ left: tooltip.left, top: tooltip.top, transform: tipAnchor }}
+            >
+              <div className="text-xs font-mono font-semibold" style={{ color }}>
+                {snapshots[tooltip.idx].power_rank.toFixed(1)}
+              </div>
+              <div className="text-[10px] text-text-muted mt-0.5">{fmtDate(snapshots[tooltip.idx].snapshot_date)}</div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* date axis */}
+      <div className="flex justify-between px-4 pt-1 pb-3 text-[10px] text-text-muted">
+        <span>{fmtDate(snapshots[0].snapshot_date)}</span>
+        <span>{fmtDate(snapshots[mid].snapshot_date)}</span>
+        <span>{fmtDate(snapshots[snapshots.length - 1].snapshot_date)}</span>
+      </div>
+
+      {/* stats row */}
+      <div className="grid grid-cols-3 border-t border-border">
+        <div className="px-4 py-3">
+          <div className="text-[10px] text-text-muted mb-0.5">Start</div>
+          <div className="text-sm font-mono font-semibold">{values[0].toFixed(1)}</div>
+          <div className="text-[10px] text-text-muted">{fmtDate(snapshots[0].snapshot_date)}</div>
+        </div>
+        <div className="px-4 py-3 border-x border-border">
+          <div className="text-[10px] text-text-muted mb-0.5">Peak</div>
+          <div className="text-sm font-mono font-semibold text-yellow-400">{rawMax.toFixed(1)}</div>
+          <div className="text-[10px] text-text-muted">{fmtDate(peakDate)}</div>
+        </div>
+        <div className="px-4 py-3 text-right">
+          <div className="text-[10px] text-text-muted mb-0.5">Current</div>
+          <div className={`text-sm font-mono font-semibold ${delta > 0.001 ? "text-green-400" : delta < -0.001 ? "text-red-400" : "text-text-muted"}`}>
+            {values[values.length - 1].toFixed(1)}
+          </div>
+          <div className="text-[10px] text-text-muted">{fmtDate(snapshots[snapshots.length - 1].snapshot_date)}</div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -187,21 +293,22 @@ export default function DeckViewPage({ pairData }: DeckViewPageProps) {
           const last = snapshots[snapshots.length - 1];
           const delta = last.power_rank - first.power_rank;
           const sign = delta > 0 ? "+" : "";
-          // Lower avg pair power = stronger deck, so negative delta is good.
-          const trendColor = delta < -0.001 ? "text-green-400" : delta > 0.001 ? "text-red-400" : "text-text-muted";
+          const trendColor = delta > 0.001 ? "text-green-400" : delta < -0.001 ? "text-red-400" : "text-text-muted";
           return (
-            <div className="glass rounded-xl p-5">
-              <div className="flex items-center justify-between mb-3">
+            <div className="glass rounded-xl overflow-hidden">
+              <div className="flex items-center justify-between px-5 pt-5 pb-3">
                 <h2 className="text-sm font-semibold">Power Rank History</h2>
-                <span className={`text-sm font-mono font-semibold ${trendColor}`}>
+                <span
+                  className={`group relative text-sm font-mono font-semibold cursor-help ${trendColor}`}
+                  title=""
+                >
                   {sign}{delta.toFixed(2)} all time
+                  <span className="pointer-events-none absolute right-0 top-full mt-1.5 z-20 w-64 rounded-lg glass border border-border px-3 py-2 text-xs font-normal text-text-muted opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                    Total pair power score change since your first recorded snapshot. It&apos;s a raw sum across all card pairs — not a ranking position — so large numbers are normal.
+                  </span>
                 </span>
               </div>
-              <Sparkline snapshots={snapshots} />
-              <div className="flex justify-between mt-2 text-xs text-text-muted">
-                <span>{first.snapshot_date}</span>
-                <span>{last.snapshot_date}</span>
-              </div>
+              <PowerRankChart snapshots={snapshots} />
             </div>
           );
         })()}
