@@ -1,5 +1,6 @@
 import { parquetRead } from "hyparquet";
 import type { PairData, ParquetVersion } from "../types";
+import { authHeader } from "./authHeader";
 
 export interface UploadProgress {
   step: "parsing" | "uploading-json" | "done";
@@ -18,9 +19,9 @@ export async function uploadPairData(
   uploaderEmail?: string,
   onProgress?: (progress: UploadProgress) => void
 ): Promise<{ pairData: PairData; pairCount: number; cardCount: number }> {
-  const secret = process.env.NEXT_PUBLIC_UPLOAD_SECRET;
-  if (!secret) {
-    throw new Error("Upload secret not configured");
+  const auth = await authHeader();
+  if (!auth.Authorization) {
+    throw new Error("You must be signed in to upload");
   }
 
   // Step 1: Parse parquet file client-side
@@ -63,7 +64,7 @@ export async function uploadPairData(
 
   const urlRes = await fetch("/api/upload-url", {
     method: "POST",
-    headers: { Authorization: `Bearer ${secret}` },
+    headers: auth,
   });
 
   if (!urlRes.ok) {
@@ -102,7 +103,7 @@ export async function uploadPairData(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${secret}`,
+      ...auth,
     },
     body: JSON.stringify(versionEntry),
   }).catch(() => {});

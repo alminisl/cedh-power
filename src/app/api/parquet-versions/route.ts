@@ -1,4 +1,5 @@
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { requireAdmin } from "../../../lib/requireAdmin";
 import { r2, R2_BUCKET } from "../../../lib/r2";
 import { NextRequest, NextResponse } from "next/server";
 import type { ParquetVersion } from "../../../types";
@@ -19,8 +20,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const token = request.headers.get("authorization");
-  if (token !== `Bearer ${process.env.UPLOAD_SECRET}`) {
+  if (!(await requireAdmin(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

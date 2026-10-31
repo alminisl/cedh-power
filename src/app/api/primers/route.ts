@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "../../../lib/requireAdmin";
 import { getServerSupabase } from "../../../lib/supabaseServer";
 
 export async function GET() {
@@ -15,8 +16,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const token = request.headers.get("authorization");
-  if (token !== `Bearer ${process.env.UPLOAD_SECRET}`) {
+  if (!(await requireAdmin(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -135,18 +135,19 @@ export default function SwapTester({
 
           <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <div className="flex items-center gap-2">
-              {swapResult.diff > 0.0001 ? (
-                <TrendingUp className="w-4 h-4 text-green-400" />
-              ) : swapResult.diff < -0.0001 ? (
-                <TrendingDown className="w-4 h-4 text-red-400" />
+              {/* Lower power = stronger, so a negative diff is an improvement */}
+              {swapResult.diff < -0.0001 ? (
+                <TrendingDown className="w-4 h-4 text-green-400" />
+              ) : swapResult.diff > 0.0001 ? (
+                <TrendingUp className="w-4 h-4 text-red-400" />
               ) : (
                 <Minus className="w-4 h-4 text-text-muted" />
               )}
               <span
                 className={`text-lg font-bold font-mono ${
-                  swapResult.diff > 0.0001
+                  swapResult.diff < -0.0001
                     ? "text-green-400"
-                    : swapResult.diff < -0.0001
+                    : swapResult.diff > 0.0001
                       ? "text-red-400"
                       : "text-text-muted"
                 }`}

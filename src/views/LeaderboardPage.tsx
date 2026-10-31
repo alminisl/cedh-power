@@ -11,7 +11,7 @@ const landNameSet = new Set<string>(landNames);
 function getQuartileColor(value: number, min: number, max: number): string {
   const range = max - min;
   if (range === 0) return "bg-gray-500";
-  const pct = (value - min) / range;
+  const pct = (max - value) / range; // lower power = stronger
   if (pct >= 0.75) return "bg-green-500";
   if (pct >= 0.5) return "bg-emerald-500";
   if (pct >= 0.25) return "bg-amber-500";
@@ -40,7 +40,7 @@ export default function LeaderboardPage({ pairData }: LeaderboardPageProps) {
   const [filter, setFilter] = useState("");
   const [minPairs, setMinPairs] = useState(1);
   const [sortKey, setSortKey] = useState<SortKey>("avgPower");
-  const [sortAsc, setSortAsc] = useState(false);
+  const [sortAsc, setSortAsc] = useState(true); // lower power = stronger, so ascending puts the best first
   const [page, setPage] = useState(0);
   const [hideLands, setHideLands] = useState(false);
 
@@ -49,7 +49,7 @@ export default function LeaderboardPage({ pairData }: LeaderboardPageProps) {
   const [commanderFilter, setCommanderFilter] = useState("");
   const [commanderLoading, setCommanderLoading] = useState(false);
   const [commanderSortKey, setCommanderSortKey] = useState<"commander" | "count" | "avgPower">("avgPower");
-  const [commanderSortAsc, setCommanderSortAsc] = useState(false);
+  const [commanderSortAsc, setCommanderSortAsc] = useState(true);
 
   useEffect(() => {
     if (tab !== "commanders" || commanderStats.length > 0) return;
@@ -118,7 +118,7 @@ export default function LeaderboardPage({ pairData }: LeaderboardPageProps) {
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) setSortAsc(!sortAsc);
-    else { setSortKey(key); setSortAsc(false); }
+    else { setSortKey(key); setSortAsc(key === "avgPower"); }
     setPage(0);
   }
 
@@ -255,11 +255,9 @@ export default function LeaderboardPage({ pairData }: LeaderboardPageProps) {
               <tbody>
                 {pageItems.map((card, i) => {
                   const rank = page * PAGE_SIZE + i + 1;
-                  const barWidth = max > min ? ((card.avgPower - min) / (max - min)) * 100 : 50;
-                  const percentile =
-                    sorted.length > 1
-                      ? Math.round(((sorted.length - rank) / (sorted.length - 1)) * 100)
-                      : 100;
+                  // Strength relative to the whole pool, independent of the current sort.
+                  const barWidth = max > min ? ((max - card.avgPower) / (max - min)) * 100 : 50;
+                  const percentile = Math.round(barWidth);
                   return (
                     <tr
                       key={card.name}

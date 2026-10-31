@@ -46,7 +46,7 @@ function PowerRankChart({ snapshots }: { snapshots: Snapshot[] }) {
   const areaPath = `${linePath} L${pts[pts.length - 1][0]},${H} L${pts[0][0]},${H} Z`;
 
   const delta = values[values.length - 1] - values[0];
-  const color = delta > 0.001 ? "#22c55e" : delta < -0.001 ? "#ef4444" : "#6b7280";
+  const color = delta < -0.001 ? "#22c55e" : delta > 0.001 ? "#ef4444" : "#6b7280"; // lower = stronger
 
   const peakIdx = values.indexOf(rawMax);
   const peakDate = snapshots[peakIdx].snapshot_date;
@@ -136,7 +136,7 @@ function PowerRankChart({ snapshots }: { snapshots: Snapshot[] }) {
         </div>
         <div className="px-4 py-3 text-right">
           <div className="text-[10px] text-text-muted mb-0.5">Current</div>
-          <div className={`text-sm font-mono font-semibold ${delta > 0.001 ? "text-green-400" : delta < -0.001 ? "text-red-400" : "text-text-muted"}`}>
+          <div className={`text-sm font-mono font-semibold ${delta < -0.001 ? "text-green-400" : delta > 0.001 ? "text-red-400" : "text-text-muted"}`}>
             {values[values.length - 1].toFixed(1)}
           </div>
           <div className="text-[10px] text-text-muted">{fmtDate(snapshots[snapshots.length - 1].snapshot_date)}</div>
@@ -293,7 +293,7 @@ export default function DeckViewPage({ pairData }: DeckViewPageProps) {
           const last = snapshots[snapshots.length - 1];
           const delta = last.power_rank - first.power_rank;
           const sign = delta > 0 ? "+" : "";
-          const trendColor = delta > 0.001 ? "text-green-400" : delta < -0.001 ? "text-red-400" : "text-text-muted";
+          const trendColor = delta < -0.001 ? "text-green-400" : delta > 0.001 ? "text-red-400" : "text-text-muted";
           return (
             <div className="glass rounded-xl overflow-hidden">
               <div className="flex items-center justify-between px-5 pt-5 pb-3">

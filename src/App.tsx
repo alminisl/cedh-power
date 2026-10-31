@@ -22,14 +22,13 @@ import { useAuth } from "./context/AuthContext";
 import { analyzeDeck, parseDeckList } from "./lib/deckAnalyzer";
 import { mergePairData } from "./lib/mergePairData";
 import { useCardTypes } from "./hooks/useCardTypes";
+import { isAdminEmail } from "./lib/admin";
 import type { DeckAnalysis, HistoryEntry } from "./types";
 import type { Decklist } from "./hooks/useDecklists";
 
-const ADMIN_EMAILS = ["oromier@gmail.com", "mansbredelius@gmail.com"];
-
 export default function App() {
   const { user } = useAuth();
-  const isAdmin = !!user && ADMIN_EMAILS.includes(user.email ?? "");
+  const isAdmin = isAdminEmail(user?.email);
 
   const { pairData, loading, error, replacePairData } = usePairData();
   const [results, setResults] = useState<DeckAnalysis | null>(null);
@@ -172,7 +171,7 @@ export default function App() {
                     {loading ? (
                       <div className="flex flex-col items-center justify-center py-32 gap-4">
                         <Loader2 className="w-8 h-8 text-accent animate-spin" />
-                        <p className="text-text-muted text-sm">Loading 87,721 card pairs...</p>
+                        <p className="text-text-muted text-sm">Loading card pair data...</p>
                       </div>
                     ) : (
                       <>

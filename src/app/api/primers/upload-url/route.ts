@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "../../../../lib/requireAdmin";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { r2, R2_BUCKET } from "../../../../lib/r2";
 import { randomUUID } from "crypto";
 
 export async function POST(request: NextRequest) {
-  const token = request.headers.get("authorization");
-  if (token !== `Bearer ${process.env.UPLOAD_SECRET}`) {
+  if (!(await requireAdmin(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

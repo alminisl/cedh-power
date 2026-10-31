@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { BookOpen, Upload, Trash2, Loader2, Eye, Download, X, Search } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { isAdminEmail } from "../lib/admin";
+import { authHeader } from "../lib/authHeader";
 
 interface Primer {
   id: string;
@@ -20,8 +22,6 @@ interface DeckOption {
   commander: string | null;
 }
 
-const ADMIN_EMAILS = ["oromier@gmail.com", "mansbredelius@gmail.com"];
-
 function formatDate(ts: string): string {
   return new Date(ts).toLocaleDateString(undefined, {
     month: "short",
@@ -32,7 +32,7 @@ function formatDate(ts: string): string {
 
 export default function PrimersPage() {
   const { user } = useAuth();
-  const isAdmin = !!user && ADMIN_EMAILS.includes(user.email ?? "");
+  const isAdmin = isAdminEmail(user?.email);
 
   const [primers, setPrimers] = useState<Primer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,12 +72,13 @@ export default function PrimersPage() {
   }
 
   async function handleDelete(id: string) {
-    await fetch(`/api/primers/${id}`, {
+    const res = await fetch(`/api/primers/${id}`, {
       method: "DELETE",
-      headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_UPLOAD_SECRET}` },
+      headers: await authHeader(),
     });
-    setPrimers((prev) => prev.filter((p) => p.id !== id));
     setConfirmDeleteId(null);
+    if (!res.ok) return;
+    setPrimers((prev) => prev.filter((p) => p.id !== id));
   }
 
   return (
@@ -329,7 +330,7 @@ function UploadModal({ onClose, onSuccess, userEmail }: UploadModalProps) {
     e.preventDefault();
     if (!file || !title.trim() || !commander.trim()) return;
 
-    const secret = process.env.NEXT_PUBLIC_UPLOAD_SECRET;
+    const auth = await authHeader();
     setErrorMsg("");
 
     try {
@@ -339,7 +340,7 @@ function UploadModal({ onClose, onSuccess, userEmail }: UploadModalProps) {
         generatePdfThumbnail(file).catch(() => null),
         fetch("/api/primers/upload-url", {
           method: "POST",
-          headers: { Authorization: `Bearer ${secret}` },
+          headers: auth,
         }),
       ]);
 
@@ -362,7 +363,7 @@ function UploadModal({ onClose, onSuccess, userEmail }: UploadModalProps) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${secret}`,
+          ...auth,
         },
         body: JSON.stringify({
           title: title.trim(),
