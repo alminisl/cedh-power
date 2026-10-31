@@ -136,11 +136,21 @@ export default function ResultsDashboard({
     }
   }
 
+  const cardCount = results.cardBreakdown.reduce((n, c) => n + (c.quantity ?? 1), 0);
+
   return (
     <div className="space-y-6 animate-fade-in-up">
       <div className="flex items-center justify-center gap-3">
         <PowerRankHero value={results.totalPowerRank} />
       </div>
+
+      {/* Scores assume a 100-card deck; other sizes aren't comparable */}
+      {cardCount !== 100 && (
+        <p className="mx-auto max-w-xl text-center text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-4 py-2">
+          This deck has {cardCount} cards, {cardCount > 100 ? "more" : "fewer"} than the 100 a
+          Commander deck should have, so its score isn't comparable to other decks.
+        </p>
+      )}
 
       {/* Commander percentile */}
       {percentile !== null && totalDecks >= 3 && (
