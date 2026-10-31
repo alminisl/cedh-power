@@ -54,31 +54,42 @@ export default function LeaderboardPage({ pairData }: LeaderboardPageProps) {
   useEffect(() => {
     if (tab !== "commanders" || commanderStats.length > 0) return;
     setCommanderLoading(true);
-    supabase
-      .from("decklists")
-      .select("commander, average_pair_power")
-      .not("commander", "is", null)
-      .limit(2000)
-      .then(({ data }) => {
-        if (!data) { setCommanderLoading(false); return; }
-        const map: Record<string, { count: number; totalPower: number }> = {};
-        for (const row of data) {
-          const cmd = row.commander as string;
-          if (!map[cmd]) map[cmd] = { count: 0, totalPower: 0 };
-          map[cmd].count++;
-          map[cmd].totalPower += row.average_pair_power ?? 0;
-        }
-        const stats: CommanderStat[] = Object.entries(map)
-          .filter(([, s]) => s.count >= 1)
-          .map(([commander, s]) => ({
-            commander,
-            count: s.count,
-            avgPower: s.totalPower / s.count,
-          }))
-          .sort((a, b) => a.avgPower - b.avgPower); // lower = stronger
-        setCommanderStats(stats);
-        setCommanderLoading(false);
-      });
+    (async () => {
+      // Supabase caps a response at 1000 rows, so page through.
+      const rows: { user_id: string; commander: string; average_pair_power: number | null }[] = [];
+      for (let from = 0; ; from += 1000) {
+        const { data } = await supabase
+          .from("decklists")
+          .select("user_id, commander, average_pair_power")
+          .not("commander", "is", null)
+          .order("updated_at", { ascending: false })
+          .range(from, from + 999);
+        if (!data) break;
+        rows.push(...data);
+        if (data.length < 1000) break;
+      }
+
+      // Count each user's most recent deck per commander once, so saving
+      // many variations doesn't let one person dominate a commander's average.
+      const seen = new Set<string>();
+      const map: Record<string, { count: number; totalPower: number }> = {};
+      for (const row of rows) {
+        const key = `${row.user_id}|${row.commander}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        if (!map[row.commander]) map[row.commander] = { count: 0, totalPower: 0 };
+        map[row.commander].count++;
+        map[row.commander].totalPower += row.average_pair_power ?? 0;
+      }
+      setCommanderStats(
+        Object.entries(map).map(([commander, st]) => ({
+          commander,
+          count: st.count,
+          avgPower: st.totalPower / st.count,
+        }))
+      );
+      setCommanderLoading(false);
+    })();
   }, [tab, commanderStats.length]);
 
   const allCards = useMemo(
@@ -350,7 +361,7 @@ export default function LeaderboardPage({ pairData }: LeaderboardPageProps) {
                     {(
                       [
                         { key: "commander" as const, label: "Commander" },
-                        { key: "count" as const, label: "Decks" },
+                        { key: "count" as const, label: "Players" },
                         { key: "avgPower" as const, label: "Avg Power" },
                       ] as const
                     ).map((col) => (

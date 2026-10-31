@@ -20,7 +20,7 @@ interface ResultsDashboardProps {
   commander?: string;
   deckText?: string;
   sessionHistory?: SessionPoint[];
-  onSave?: (deckName: string) => Promise<void>;
+  onSave?: (deckName: string) => Promise<boolean>;
   onSwap?: (oldCard: string, newCard: string) => void;
   groupedCards?: Record<string, string[]> | null;
   typesLoading?: boolean;
@@ -112,8 +112,12 @@ export default function ResultsDashboard({
   async function handleSave() {
     if (!onSave) return;
     setSaving(true);
-    await onSave(deckName.trim() || commander || "Unnamed Deck");
+    const ok = await onSave(deckName.trim() || commander || "Unnamed Deck");
     setSaving(false);
+    if (!ok) {
+      alert("Couldn't save the deck. Please try again.");
+      return;
+    }
     setSaved(true);
     setShowNameInput(false);
     setTimeout(() => setSaved(false), 2000);

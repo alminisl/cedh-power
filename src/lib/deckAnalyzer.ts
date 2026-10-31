@@ -148,6 +148,15 @@ export function analyzeDeck(cards: string[], pairData: PairData): DeckAnalysis {
   };
 }
 
+// Replaces a single copy, so swapping out one basic land keeps the others.
+export function swapOneCopy(cards: string[], oldCard: string, newCard: string): string[] {
+  const i = cards.indexOf(oldCard);
+  if (i === -1) return cards;
+  const next = [...cards];
+  next[i] = newCard;
+  return next;
+}
+
 export function simulateSwap(
   cards: string[],
   oldCard: string,
@@ -155,7 +164,7 @@ export function simulateSwap(
   pairData: PairData
 ): SwapResult {
   const oldAnalysis = analyzeDeck(cards, pairData);
-  const newCards = cards.map((c) => (c === oldCard ? newCard : c));
+  const newCards = swapOneCopy(cards, oldCard, newCard);
   const newAnalysis = analyzeDeck(newCards, pairData);
 
   return {

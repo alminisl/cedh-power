@@ -1,8 +1,7 @@
 import { useState, useRef, useMemo, useEffect, type FormEvent } from "react";
 import { Plus, Upload, Trash2, FileText, Code, Database, Loader2, CheckCircle, BarChart3, History } from "lucide-react";
 import { uploadPairData, type UploadProgress } from "../lib/uploadPairData";
-import { analyzeDeck } from "../lib/deckAnalyzer";
-import { supabase } from "../lib/supabase";
+import { authHeader } from "../lib/authHeader";
 import { useAuth } from "../context/AuthContext";
 import type { PairData, PairStats, ParquetVersion } from "../types";
 
@@ -20,6 +19,28 @@ interface AddDataPageProps {
   onRemovePair: (key: string) => void;
   onClearAll: () => void;
   onReplacePairData?: (data: PairData) => void;
+}
+
+interface RecomputeResult {
+  count: number;
+  improved: number;
+  dropped: number;
+  unchanged: number;
+  topMover: { name: string; delta: number } | null;
+}
+
+// Scores are recomputed server-side: RLS only lets a user update their own decks.
+async function recomputeAllDecks(): Promise<RecomputeResult> {
+  const res = await fetch("/api/decks/recompute", { method: "POST", headers: await authHeader() });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error ?? `Re-analyze failed (${res.status})`);
+  return body;
+}
+
+function describeRecompute(r: RecomputeResult): string {
+  const sign = r.topMover && r.topMover.delta > 0 ? "+" : "";
+  const mover = r.topMover ? ` Biggest mover: ${r.topMover.name} ${sign}${r.topMover.delta.toFixed(2)}.` : "";
+  return `${r.count} deck${r.count !== 1 ? "s" : ""} — ↑ ${r.improved} improved, ↓ ${r.dropped} dropped, → ${r.unchanged} unchanged.${mover}`;
 }
 
 export default function AddDataPage({
@@ -138,72 +159,9 @@ export default function AddDataPage({
     setReanalyzeResult("");
     setReanalyzeProgress({ current: 0, total: 0 });
     try {
-      const { data: allDecks } = await supabase
-        .from("decklists")
-        .select("id, cards, power_rank, commander");
-
-      const total = allDecks?.length ?? 0;
-      setReanalyzeProgress({ current: 0, total });
-
-      let count = 0;
-      let improved = 0, dropped = 0, unchanged = 0;
-      let topMover: { name: string; delta: number } | null = null;
-      const snapshots: {
-        deck_id: string; snapshot_date: string;
-        power_rank: number; average_pair_power: number;
-        pairs_found: number; pairs_missing: number;
-      }[] = [];
-      const today = new Date().toISOString().split("T")[0];
-
-      if (allDecks && total > 0) {
-        for (const deck of allDecks) {
-          const analysis = analyzeDeck(deck.cards, pairData);
-          const delta = analysis.totalPowerRank - (deck.power_rank ?? 0);
-
-          if (delta > 0.001) improved++;
-          else if (delta < -0.001) dropped++;
-          else unchanged++;
-
-          if (!topMover || Math.abs(delta) > Math.abs(topMover.delta)) {
-            topMover = { name: deck.commander ?? deck.id, delta };
-          }
-
-          snapshots.push({
-            deck_id: deck.id,
-            snapshot_date: today,
-            power_rank: analysis.totalPowerRank,
-            average_pair_power: analysis.averagePairPower,
-            pairs_found: analysis.pairsFound,
-            pairs_missing: analysis.pairsMissing,
-          });
-
-          await supabase
-            .from("decklists")
-            .update({
-              power_rank: analysis.totalPowerRank,
-              average_pair_power: analysis.averagePairPower,
-              pairs_found: analysis.pairsFound,
-              pairs_missing: analysis.pairsMissing,
-              total_pairs: analysis.totalPairs,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", deck.id);
-          count++;
-          setReanalyzeProgress({ current: count, total });
-        }
-
-        if (snapshots.length > 0) {
-          await supabase.from("deck_snapshots").insert(snapshots);
-        }
-      }
-
-      const sign = topMover && topMover.delta > 0 ? "+" : "";
-      const topMoverStr = topMover
-        ? `. Biggest mover: ${topMover.name} ${sign}${topMover.delta.toFixed(2)}`
-        : "";
-      setReanalyzeResult(
-        `Re-analyzed ${count} deck${count !== 1 ? "s" : ""} — ↑ ${improved} improved, ↓ ${dropped} dropped, → ${unchanged} unchanged${topMoverStr}.`
-      );
+      const r = await recomputeAllDecks();
+      setReanalyzeProgress({ current: r.count, total: r.count });
+      setReanalyzeResult(`Re-analyzed ${describeRecompute(r)}`);
     } catch (err) {
       setReanalyzeResult(`Error: ${(err as Error).message}`);
     } finally {
@@ -234,67 +192,9 @@ export default function AddDataPage({
       // Re-analyze all saved decks against new pair data
       setUploadProgress({ step: "uploading-json", percent: 85, label: "Re-analyzing saved decks..." });
 
-      const { data: allDecks } = await supabase
-        .from("decklists")
-        .select("id, cards, power_rank, commander");
-
-      let reanalyzed = 0;
-      let improved = 0, dropped = 0, unchanged = 0;
-      let topMover: { name: string; delta: number } | null = null;
-      const snapshots: {
-        deck_id: string; snapshot_date: string;
-        power_rank: number; average_pair_power: number;
-        pairs_found: number; pairs_missing: number;
-      }[] = [];
-      const today = new Date().toISOString().split("T")[0];
-
-      if (allDecks && allDecks.length > 0) {
-        for (const deck of allDecks) {
-          const analysis = analyzeDeck(deck.cards, newPairData);
-          const delta = analysis.totalPowerRank - (deck.power_rank ?? 0);
-
-          if (delta > 0.001) improved++;
-          else if (delta < -0.001) dropped++;
-          else unchanged++;
-
-          if (!topMover || Math.abs(delta) > Math.abs(topMover.delta)) {
-            topMover = { name: deck.commander ?? deck.id, delta };
-          }
-
-          snapshots.push({
-            deck_id: deck.id,
-            snapshot_date: today,
-            power_rank: analysis.totalPowerRank,
-            average_pair_power: analysis.averagePairPower,
-            pairs_found: analysis.pairsFound,
-            pairs_missing: analysis.pairsMissing,
-          });
-
-          await supabase
-            .from("decklists")
-            .update({
-              power_rank: analysis.totalPowerRank,
-              average_pair_power: analysis.averagePairPower,
-              pairs_found: analysis.pairsFound,
-              pairs_missing: analysis.pairsMissing,
-              total_pairs: analysis.totalPairs,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", deck.id);
-          reanalyzed++;
-        }
-
-        if (snapshots.length > 0) {
-          await supabase.from("deck_snapshots").insert(snapshots);
-        }
-      }
-
-      const sign = topMover && topMover.delta > 0 ? "+" : "";
-      const topMoverStr = topMover
-        ? ` Biggest mover: ${topMover.name} ${sign}${topMover.delta.toFixed(2)}.`
-        : "";
+      const r = await recomputeAllDecks();
       setParquetSuccess(
-        `Replaced pair data: ${pairCount.toLocaleString()} pairs across ${cardCount.toLocaleString()} cards. Re-analyzed ${reanalyzed} deck${reanalyzed !== 1 ? "s" : ""} — ↑ ${improved} improved, ↓ ${dropped} dropped, → ${unchanged} unchanged.${topMoverStr}`
+        `Replaced pair data: ${pairCount.toLocaleString()} pairs across ${cardCount.toLocaleString()} cards. Re-analyzed ${describeRecompute(r)}`
       );
       fetchUploadHistory();
     } catch (err) {

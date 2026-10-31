@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
-import type { DeckAnalysis } from "../types";
+import { authHeader } from "../lib/authHeader";
 
 export interface Decklist {
   id: string;
@@ -67,35 +67,22 @@ export function useDecklists(userId: string | undefined, opts?: { allUsers?: boo
   }, [fetchDecklists]);
 
   const saveDeck = useCallback(
-    async (commander: string, cards: string[], analysis: DeckAnalysis, deckName?: string) => {
+    async (commander: string, cards: string[], deckName?: string) => {
       if (!userId) return null;
 
       const colorIdentity = await fetchColorIdentity(commander);
 
-      const row = {
-        user_id: userId,
-        deck_name: deckName || commander || null,
-        commander: commander || null,
-        color_identity: colorIdentity,
-        cards,
-        power_rank: analysis.totalPowerRank,
-        average_pair_power: analysis.averagePairPower,
-        pairs_found: analysis.pairsFound,
-        pairs_missing: analysis.pairsMissing,
-        total_pairs: analysis.totalPairs,
-        updated_at: new Date().toISOString(),
-      };
-
-      // Always insert as a new deck — users can save multiple variations
-      const { data, error } = await supabase
-        .from("decklists")
-        .insert(row)
-        .select()
-        .single();
-      if (!error && data) {
-        setDecklists((prev) => [data, ...prev]);
-      }
-      return error ? null : data;
+      // The server computes the score so it can't be spoofed from the browser.
+      // Always inserts a new deck — users can save multiple variations.
+      const res = await fetch("/api/decks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await authHeader()) },
+        body: JSON.stringify({ commander, cards, deck_name: deckName, color_identity: colorIdentity }),
+      });
+      if (!res.ok) return null;
+      const data: Decklist = await res.json();
+      setDecklists((prev) => [data, ...prev]);
+      return data;
     },
     [userId]
   );

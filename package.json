@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint src",
     "sync-data": "curl -s http://localhost:3000/api/pair-data -o src/data/pairData.json",
     "convert": "python scripts/convert_parquet.py",
     "fetch-lands": "node scripts/fetchLandNames.mjs",
@@ -37,8 +37,8 @@
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.1"
   }
 }

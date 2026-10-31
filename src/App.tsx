@@ -19,7 +19,7 @@ import { useHistory } from "./hooks/useHistory";
 import { useCustomPairs } from "./hooks/useCustomPairs";
 import { useDecklists } from "./hooks/useDecklists";
 import { useAuth } from "./context/AuthContext";
-import { analyzeDeck, parseDeckList } from "./lib/deckAnalyzer";
+import { analyzeDeck, parseDeckList, swapOneCopy } from "./lib/deckAnalyzer";
 import { mergePairData } from "./lib/mergePairData";
 import { useCardTypes } from "./hooks/useCardTypes";
 import { isAdminEmail } from "./lib/admin";
@@ -98,8 +98,8 @@ export default function App() {
   }
 
   async function handleSaveDeck(deckName: string) {
-    if (!results || !user) return;
-    await saveDeck(currentCommander, currentCards, results, deckName);
+    if (!results || !user) return false;
+    return !!(await saveDeck(currentCommander, currentCards, deckName));
   }
 
   function handleHistorySelect(entry: HistoryEntry) {
@@ -111,7 +111,7 @@ export default function App() {
 
   function handleSwap(oldCard: string, newCard: string) {
     if (!mergedData) return;
-    const newCards = currentCards.map((c) => (c === oldCard ? newCard : c));
+    const newCards = swapOneCopy(currentCards, oldCard, newCard);
     const newText = newCards.map((c) => "1 " + c).join("\n");
     setDeckText(newText);
     setCurrentCards(newCards);
